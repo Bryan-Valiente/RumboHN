@@ -29,3 +29,15 @@
 @media (max-width:1050px){.quick-actions{grid-template-columns:1fr}.quick-action-grid{grid-template-columns:repeat(5,1fr)}.pulse-grid{grid-template-columns:repeat(2,1fr)}.goal-plan-row{grid-template-columns:1fr 1fr}.plan-result{text-align:left}.reminder-grid{grid-template-columns:1fr}}
 @media (max-width:780px){.briefing-card{grid-template-columns:auto 1fr;padding:17px}.briefing-meta{grid-column:1/-1;border-top:1px solid rgba(77,126,99,.18);padding-top:12px}.quick-actions{padding:17px}.quick-action-grid{grid-template-columns:repeat(2,1fr)}.quick-action-grid button:last-child{grid-column:span 2}.pulse-section{padding:17px}.pulse-grid{grid-template-columns:1fr 1fr}.reminder-summary{grid-template-columns:1fr 1fr}.reminder-summary>div:last-child{grid-column:1/-1}.daily-hero{align-items:flex-start}.daily-grid{grid-template-columns:1fr}.daily-metrics{grid-template-columns:1fr 1fr}.daily-questions{display:grid}.daily-questions button{justify-content:flex-start}.goal-plan-row{grid-template-columns:1fr;gap:11px}.plan-result{text-align:left}.frequency-pills{overflow:auto;flex-wrap:nowrap;padding-bottom:3px}.notification-popover{top:61px;right:16px}.notification-settings-grid{grid-template-columns:1fr}.notification-times{display:grid;grid-template-columns:1fr 1fr}.notification-times>span{grid-column:1/-1;margin:0}.movement-row{grid-template-columns:32px minmax(0,1fr) auto auto}.movement-row .amount{font-size:11px}.auth-modal,.onboarding-modal,.small-modal{max-width:calc(100vw - 28px);max-height:calc(100vh - 28px)}.form-grid{min-width:0}.small-modal{padding:25px 18px}.page-content{padding-left:14px;padding-right:14px}.product-header{padding-left:14px;padding-right:14px}.content-panel,.balance-panel,.insight-panel{min-width:0}.category-report-row,.report-bars>div{grid-template-columns:minmax(0,90px) minmax(0,1fr) minmax(72px,84px)}.plan-card,.goal-card,.budget-card{min-width:0}}
 @media (max-width:360px){.quick-action-grid{grid-template-columns:1fr}.quick-action-grid button:last-child{grid-column:auto}.pulse-grid{grid-template-columns:1fr}.reminder-summary{grid-template-columns:1fr}.reminder-summary>div:last-child{grid-column:auto}.daily-metrics{grid-template-columns:1fr}.bottom-link{font-size:8px;padding-left:3px;padding-right:3px}.bottom-link svg{width:16px}.big-balance{font-size:27px}}
+
+/* Keep the full navigation reachable on short landscape screens. */
+.sidebar{overflow-y:auto}
+.hero-visual .visual-caption{display:none}
+
+@media (max-width:1050px){.daily-grid{grid-template-columns:1fr}}
+
+@media (max-width:780px){
+  .hero-balance{position:relative;z-index:1}
+}
+
+@media (max-width:360px){.hero-orb{display:none}}
