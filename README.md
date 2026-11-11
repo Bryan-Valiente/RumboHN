@@ -82,6 +82,13 @@ LOOP-003 agregó:
 - Antes de comenzar una tarea, cada colaborador debe actualizar su rama desde el `main` más reciente usando una estrategia segura y resolver conflictos antes de solicitar revisión.
 - No se deben hacer pushes directos a `main`, ni fusionar cambios incompletos o con el build fallando.
 
+## Calidad y CI
+
+- `npm run test:run` ejecuta las pruebas unitarias Vitest de la lógica financiera existente.
+- `npm run build` ejecuta la compilación TypeScript y el bundle de producción Vite.
+- GitHub Actions ejecuta ambos comandos en pull requests hacia `main` y en pushes a `feature/bryan` y `feature/owen`.
+- La guía técnica para Owen está en [`docs/OWEN-ONBOARDING.md`](docs/OWEN-ONBOARDING.md).
+
 ## Limitaciones de la demostración
 
 RUMBO HN es una demostración frontend local. No incluye backend, base de datos, autenticación real, API de IA, conexiones bancarias, pagos ni datos financieros reales. Todos los registros y respuestas son ficticios y viven únicamente en memoria del navegador.
