@@ -198,4 +198,15 @@ describe('getDailySummary', () => {
     expect(report.totalQuickExpenses).toBe(53)
     expect(report.quickExpenses.map((item) => item.name)).toEqual(['Café', 'Bus'])
   })
+
+  it('recalculates a quick expense after editing or deleting it', () => {
+    const state = makeState({ movements: [movement({ id: 7, name: 'Café', amount: 35, quickExpense: true, timestamp: '2026-11-18T13:10:00.000Z' })] })
+    const edited = getDailyReport({ ...state, movements: state.movements.map((item) => item.id === 7 ? { ...item, amount: 50 } : item) }, '2026-11-18')
+    const deleted = getDailyReport({ ...state, movements: [] }, '2026-11-18')
+
+    expect(edited.totalExpenses).toBe(50)
+    expect(edited.totalQuickExpenses).toBe(50)
+    expect(deleted.totalExpenses).toBe(0)
+    expect(deleted.quickExpenses).toHaveLength(0)
+  })
 })

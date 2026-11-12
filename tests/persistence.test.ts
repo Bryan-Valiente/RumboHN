@@ -41,6 +41,26 @@ describe('workspace persistence', () => {
     expect(parsed?.subscription).toBeNull()
   })
 
+  it('restores recurring reminders and notification preferences', () => {
+    const storage = new MemoryStorage()
+    const withReminder: PersistedWorkspace = {
+      ...workspace,
+      financial: {
+        ...workspace.financial,
+        reminders: [{ id: 9, name: 'Internet', category: 'Internet', expectedAmount: 700, dueDate: '2026-11-20', recurrence: 'monthly', reminderDaysBefore: 3, completed: false, notes: 'Demo' }],
+        notificationPreferences: { ...workspace.financial.notificationPreferences, evening: false, eveningTime: '21:00' },
+      },
+    }
+
+    saveWorkspace(withReminder, storage)
+    const restored = readWorkspace(storage).value
+
+    expect(restored?.financial.reminders[0].name).toBe('Internet')
+    expect(restored?.financial.reminders[0].recurrence).toBe('monthly')
+    expect(restored?.financial.notificationPreferences.evening).toBe(false)
+    expect(restored?.financial.notificationPreferences.eveningTime).toBe('21:00')
+  })
+
   it('shows seven days at creation and zero after the exact expiry moment', () => {
     expect(trialDaysRemaining(workspace.profile, workspace.profile.createdAt)).toBe(7)
     expect(trialDaysRemaining(workspace.profile, workspace.profile.trialEndsAt)).toBe(0)
