@@ -103,6 +103,7 @@ export default function App() {
     const recurring = input.recurringExpenses.filter((item) => item.name && item.amount > 0).map((item, index) => ({ id: createdAt + index + 1, name: item.name, category: item.category as ReminderCategory, expectedAmount: item.amount, dueDate: today, recurrence: 'monthly' as const, reminderDaysBefore: 3, completed: false, notes: 'Definición recurrente creada durante el onboarding.' }))
     const nextWorkspace: PersistedWorkspace = { version: 1, profile: { name: input.name, preferredGoals: input.preferredGoals, incomeFrequency: input.incomeFrequency, incomeAmount: input.incomeAmount, createdAt, trialEndsAt: createdAt + TRIAL_DURATION_MS, onboardingCompleted: true }, financial: { ...emptyFinancialState, movements: income, reminders: recurring }, subscription: null }
     setWorkspace(nextWorkspace)
+    setClock(createdAt)
     setOnboardingOpen(false)
     setScreen('dashboard')
     showNotice('Tu espacio personal está listo y guardado en este navegador.')
