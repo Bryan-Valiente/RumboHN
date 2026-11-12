@@ -4,7 +4,8 @@ export type SavingsFrequency = 'daily' | 'weekly' | 'biweekly' | 'twice-monthly'
 export type ReminderFrequency = 'one-time' | 'weekly' | 'monthly'
 export type ReminderCategory = 'Credit card' | 'Préstamo' | 'Alquiler' | 'Electricidad' | 'Agua' | 'Internet' | 'Teléfono' | 'Educación' | 'Suscripción' | 'Otra obligación'
 
-export type Movement = { id: number; name: string; category: string; amount: number; kind: MovementKind; date: string; color: string; source?: string; recurrence?: Recurrence; planned?: boolean; goalId?: number }
+export type Movement = { id: number; name: string; category: string; amount: number; kind: MovementKind; date: string; color: string; source?: string; recurrence?: Recurrence; planned?: boolean; goalId?: number; timestamp?: string; quickExpense?: boolean }
+export type MovementTemplate = { id: number; name: string; kind: MovementKind; category: string; defaultAmount?: number; recurrence: Recurrence; notes?: string }
 export type Budget = { id: string; category: string; limit: number; color: string }
 export type SavingsGoal = { id: number; name: string; label: string; current: number; target: number; targetDate: string; targetLabel?: string; color: string; preferredFrequency?: SavingsFrequency; twiceMonthlyDays?: [number, number] }
 export type SavingsContribution = { id: number; goalId: number; amount: number; date: string }
@@ -12,7 +13,7 @@ export type Reminder = { id: number; name: string; category: ReminderCategory; e
 export type NotificationKey = 'morning' | 'evening' | 'payments' | 'closing' | 'due' | 'savings' | 'budgets' | 'goals' | 'spending'
 export type NotificationPreferences = Record<NotificationKey, boolean> & { morningTime: string; eveningTime: string; timezone: string }
 export type FinancialNotification = { id: string; kind: NotificationKey; title: string; body: string; tone: 'info' | 'warning' | 'success'; dismissed?: boolean }
-export type FinancialState = { openingBalance: number; movements: Movement[]; budgets: Budget[]; goals: SavingsGoal[]; contributions: SavingsContribution[]; reminders: Reminder[]; notificationPreferences: NotificationPreferences }
+export type FinancialState = { openingBalance: number; movements: Movement[]; budgets: Budget[]; goals: SavingsGoal[]; contributions: SavingsContribution[]; reminders: Reminder[]; notificationPreferences: NotificationPreferences; templates?: MovementTemplate[] }
 
 export const DEMO_TODAY = '2026-11-18'
 export const starterMovements: Movement[] = [
@@ -33,7 +34,8 @@ export const starterReminders: Reminder[] = [
   { id: 2, name: 'Visa del hogar', category: 'Credit card', expectedAmount: 1800, dueDate: '2026-11-21', recurrence: 'monthly', reminderDaysBefore: 5, completed: false, notes: 'Pago esperado de la demo.', isCreditCard: true, cardNickname: 'Visa del hogar', bankName: 'Banco de demostración', closingDate: '2026-11-05', minimumPayment: 450 },
 ]
 export const defaultNotificationPreferences: NotificationPreferences = { morning: true, evening: true, payments: true, closing: true, due: true, savings: true, budgets: true, goals: true, spending: false, morningTime: '07:00', eveningTime: '20:30', timezone: 'America/Tegucigalpa' }
-export const initialFinancialState: FinancialState = { openingBalance: 300, movements: starterMovements, budgets: starterBudgets, goals: starterGoals, contributions: [], reminders: starterReminders, notificationPreferences: defaultNotificationPreferences }
+export const initialFinancialState: FinancialState = { openingBalance: 300, movements: starterMovements, budgets: starterBudgets, goals: starterGoals, contributions: [], reminders: starterReminders, notificationPreferences: defaultNotificationPreferences, templates: [] }
+export const emptyFinancialState: FinancialState = { openingBalance: 0, movements: [], budgets: [], goals: [], contributions: [], reminders: [], notificationPreferences: { ...defaultNotificationPreferences }, templates: [] }
 
 export type FinancialSummary = { income: number; expenses: number; balance: number; availableBalance: number; allocatedSavings: number; spentByCategory: Record<string, number>; budgetTotal: number; budgetSpent: number; goalSaved: number; goalTarget: number }
 const cents = (value: number) => Math.round((Number.isFinite(value) ? value : 0) * 100)
@@ -108,6 +110,12 @@ export function getDailySummary(state: FinancialState, date = DEMO_TODAY) {
   const movements = state.movements.filter((item) => item.date === date && !item.planned); const contributions = state.contributions.filter((item) => item.date === date)
   const income = movements.filter((item) => item.kind === 'income').reduce((sum, item) => sum + item.amount, 0); const expenses = movements.filter((item) => item.kind === 'expense').reduce((sum, item) => sum + item.amount, 0); const savings = contributions.reduce((sum, item) => sum + item.amount, 0)
   return { income, expenses, savings, net: income - expenses - savings, movements, contributions }
+}
+export function getDailyReport(state: FinancialState, date = DEMO_TODAY) {
+  const daily = getDailySummary(state, date)
+  const expenses = daily.movements.filter((item) => item.kind === 'expense').sort((a, b) => (a.timestamp || '').localeCompare(b.timestamp || '') || a.id - b.id)
+  const quickExpenses = expenses.filter((item) => item.quickExpense)
+  return { date, movements: daily.movements, expenses, quickExpenses, expenseCount: expenses.length, totalExpenses: daily.expenses, totalQuickExpenses: quickExpenses.reduce((sum, item) => sum + item.amount, 0), income: daily.income, savings: daily.savings, net: daily.net }
 }
 export function getNotifications(state: FinancialState, today = DEMO_TODAY): FinancialNotification[] {
   const preferences = state.notificationPreferences; const notifications: FinancialNotification[] = []; const soonCount = state.reminders.filter((item) => getReminderStatus(item, today) === 'soon').length

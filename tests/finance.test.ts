@@ -5,6 +5,7 @@ import {
   calculateSummary,
   defaultNotificationPreferences,
   formatDateForDisplay,
+  getDailyReport,
   getDailySummary,
   initialFinancialState,
   type FinancialState,
@@ -182,5 +183,19 @@ describe('getDailySummary', () => {
     expect(summary.savings).toBe(50)
     expect(summary.net).toBe(350)
     expect(summary.movements).toHaveLength(2)
+  })
+
+  it('keeps quick expenses chronological and totals them once', () => {
+    const state = makeState({ movements: [
+      movement({ id: 1, name: 'Bus', amount: 18, date: '2026-11-18', timestamp: '2026-11-18T14:10:00.000Z', quickExpense: true }),
+      movement({ id: 2, name: 'Café', amount: 35, date: '2026-11-18', timestamp: '2026-11-18T13:10:00.000Z', quickExpense: true }),
+      movement({ id: 3, name: 'Almuerzo', amount: 90, date: '2026-11-18', timestamp: '2026-11-18T12:10:00.000Z' }),
+    ] })
+    const report = getDailyReport(state, '2026-11-18')
+
+    expect(report.expenseCount).toBe(3)
+    expect(report.totalExpenses).toBe(143)
+    expect(report.totalQuickExpenses).toBe(53)
+    expect(report.quickExpenses.map((item) => item.name)).toEqual(['Café', 'Bus'])
   })
 })
