@@ -1,15 +1,15 @@
 export type MovementKind = 'income' | 'expense'
 export type Recurrence = 'one-time' | 'daily' | 'weekly' | 'biweekly' | 'monthly'
 export type SavingsFrequency = 'daily' | 'weekly' | 'biweekly' | 'twice-monthly' | 'monthly'
-export type ReminderFrequency = 'one-time' | 'weekly' | 'monthly'
-export type ReminderCategory = 'Credit card' | 'Préstamo' | 'Alquiler' | 'Electricidad' | 'Agua' | 'Internet' | 'Teléfono' | 'Educación' | 'Suscripción' | 'Otra obligación'
+export type ReminderFrequency = 'one-time' | 'weekly' | 'every-15-days' | 'twice-monthly' | 'monthly' | 'custom'
+export type ReminderCategory = 'Credit card' | 'Préstamo' | 'Alquiler' | 'Electricidad' | 'Agua' | 'Internet' | 'Teléfono' | 'Educación' | 'Suscripción' | 'Supermercado' | 'Transporte' | 'Otra obligación'
 
 export type Movement = { id: number; name: string; category: string; amount: number; kind: MovementKind; date: string; color: string; source?: string; recurrence?: Recurrence; planned?: boolean; goalId?: number; timestamp?: string; quickExpense?: boolean }
 export type MovementTemplate = { id: number; name: string; kind: MovementKind; category: string; defaultAmount?: number; recurrence: Recurrence; notes?: string }
 export type Budget = { id: string; category: string; limit: number; color: string }
 export type SavingsGoal = { id: number; name: string; label: string; current: number; target: number; targetDate: string; targetLabel?: string; color: string; preferredFrequency?: SavingsFrequency; twiceMonthlyDays?: [number, number] }
 export type SavingsContribution = { id: number; goalId: number; amount: number; date: string }
-export type Reminder = { id: number; name: string; category: ReminderCategory; expectedAmount: number; dueDate: string; recurrence: ReminderFrequency; reminderDaysBefore: number; completed: boolean; notes: string; isCreditCard?: boolean; cardNickname?: string; bankName?: string; closingDate?: string; minimumPayment?: number }
+export type Reminder = { id: number; name: string; category: ReminderCategory; expectedAmount: number; dueDate: string; firstPaymentDate?: string; recurrence: ReminderFrequency; twiceMonthlyDays?: [number, number]; customIntervalDays?: number; reminderDaysBefore: number; completed: boolean; paidAt?: string; paidMovementId?: number; generatedNextId?: number; notes: string; isCreditCard?: boolean; cardNickname?: string; maskedIdentifier?: string; bankName?: string; closingDate?: string; minimumPayment?: number; statementDate?: string; status?: 'upcoming' | 'today' | 'overdue' | 'paid' }
 export type NotificationKey = 'morning' | 'evening' | 'payments' | 'closing' | 'due' | 'savings' | 'budgets' | 'goals' | 'spending'
 export type NotificationPreferences = Record<NotificationKey, boolean> & { morningTime: string; eveningTime: string; timezone: string }
 export type FinancialNotification = { id: string; kind: NotificationKey; title: string; body: string; tone: 'info' | 'warning' | 'success'; dismissed?: boolean }
@@ -37,7 +37,7 @@ export const defaultNotificationPreferences: NotificationPreferences = { morning
 export const initialFinancialState: FinancialState = { openingBalance: 300, movements: starterMovements, budgets: starterBudgets, goals: starterGoals, contributions: [], reminders: starterReminders, notificationPreferences: defaultNotificationPreferences, templates: [] }
 export const emptyFinancialState: FinancialState = { openingBalance: 0, movements: [], budgets: [], goals: [], contributions: [], reminders: [], notificationPreferences: { ...defaultNotificationPreferences }, templates: [] }
 
-export type FinancialSummary = { income: number; expenses: number; balance: number; availableBalance: number; allocatedSavings: number; spentByCategory: Record<string, number>; budgetTotal: number; budgetSpent: number; goalSaved: number; goalTarget: number }
+export type FinancialSummary = { income: number; expenses: number; balance: number; availableBalance: number; pendingObligations: number; projectedBalance: number; allocatedSavings: number; spentByCategory: Record<string, number>; budgetTotal: number; budgetSpent: number; goalSaved: number; goalTarget: number }
 const cents = (value: number) => Math.round((Number.isFinite(value) ? value : 0) * 100)
 const moneyFromCents = (value: number) => value / 100
 const formatMoney = (value: number) => new Intl.NumberFormat('es-HN', { style: 'currency', currency: 'HNL', maximumFractionDigits: 2 }).format(value).replace('HNL', 'L')
@@ -51,7 +51,8 @@ export function calculateSummary(state: FinancialState): FinancialSummary {
   const goalSaved = state.goals.reduce((sum, goal) => sum + goal.current, 0)
   const goalTarget = state.goals.reduce((sum, goal) => sum + goal.target, 0)
   const balance = state.openingBalance + income - expenses
-  return { income, expenses, balance, availableBalance: balance - allocatedSavings, allocatedSavings, spentByCategory, budgetTotal: state.budgets.reduce((sum, budget) => sum + budget.limit, 0), budgetSpent, goalSaved, goalTarget }
+  const pendingObligations = state.reminders.filter((item) => !item.completed).reduce((sum, item) => sum + item.expectedAmount, 0)
+  return { income, expenses, balance, availableBalance: balance - allocatedSavings, pendingObligations, projectedBalance: balance - pendingObligations, allocatedSavings, spentByCategory, budgetTotal: state.budgets.reduce((sum, budget) => sum + budget.limit, 0), budgetSpent, goalSaved, goalTarget }
 }
 
 export function calculateBudget(state: FinancialState, budget: Budget) {
@@ -60,9 +61,11 @@ export function calculateBudget(state: FinancialState, budget: Budget) {
   return { spent, remaining, percent: Math.round(ratio * 100), status: remaining < 0 ? 'over' : ratio >= .8 ? 'warning' : 'ok' as 'over' | 'warning' | 'ok' }
 }
 
-function localDate(value: string) { const date = new Date(`${value}T12:00:00`); return Number.isNaN(date.getTime()) ? null : date }
-function isoDate(date: Date) { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}` }
-function lastDayOfMonth(year: number, month: number) { return new Date(year, month + 1, 0).getDate() }
+function localDate(value: string) { const date = new Date(`${value}T12:00:00Z`); return Number.isNaN(date.getTime()) ? null : date }
+function isoDate(date: Date) { return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}` }
+function lastDayOfMonth(year: number, month: number) { return new Date(Date.UTC(year, month + 1, 0)).getUTCDate() }
+function addDays(value: string, amount: number) { const date = localDate(value); if (!date) return value; date.setUTCDate(date.getUTCDate() + amount); return isoDate(date) }
+function addMonths(value: string, amount: number) { const date = localDate(value); if (!date) return value; const day = date.getUTCDate(); date.setUTCDate(1); date.setUTCMonth(date.getUTCMonth() + amount); date.setUTCDate(Math.min(day, lastDayOfMonth(date.getUTCFullYear(), date.getUTCMonth()))); return isoDate(date) }
 export function formatDateForDisplay(value: string) { const date = localDate(value); return date ? new Intl.DateTimeFormat('es-HN', { day: 'numeric', month: 'short' }).format(date) : value }
 export function formatGoalDate(goal: SavingsGoal) { return goal.targetLabel || (goal.targetDate ? `Para ${new Intl.DateTimeFormat('es-HN', { month: 'long', year: 'numeric' }).format(localDate(goal.targetDate) || new Date())}` : 'Sin fecha') }
 
@@ -106,6 +109,44 @@ export function getReminderStatus(reminder: Reminder, today = DEMO_TODAY) {
   if (days < 0) return 'overdue' as const; if (days === 0) return 'today' as const; if (days <= reminder.reminderDaysBefore) return 'soon' as const; return 'upcoming' as const
 }
 export function daysUntil(value: string, today = DEMO_TODAY) { const date = localDate(value); const current = localDate(today); return date && current ? Math.round((date.getTime() - current.getTime()) / 86400000) : null }
+
+export function nextReminderDate(reminder: Reminder) {
+  if (reminder.recurrence === 'one-time') return null
+  if (reminder.recurrence === 'weekly') return addDays(reminder.dueDate, 7)
+  if (reminder.recurrence === 'every-15-days') return addDays(reminder.dueDate, 15)
+  if (reminder.recurrence === 'custom') return addDays(reminder.dueDate, Math.max(1, reminder.customIntervalDays || 30))
+  if (reminder.recurrence === 'twice-monthly') {
+    const days = reminder.twiceMonthlyDays || [15, 30]
+    const current = localDate(reminder.dueDate)
+    if (!current) return null
+    const year = current.getUTCFullYear(); const month = current.getUTCMonth()
+    const nextConfigured = days.sort((a, b) => a - b).map((day) => new Date(Date.UTC(year, month, Math.min(day, lastDayOfMonth(year, month))))).find((candidate) => candidate > current)
+    if (nextConfigured) return isoDate(nextConfigured)
+    const nextMonth = month + 1; const nextYear = year + Math.floor(nextMonth / 12); const normalizedMonth = nextMonth % 12
+    return isoDate(new Date(Date.UTC(nextYear, normalizedMonth, Math.min(days[0], lastDayOfMonth(nextYear, normalizedMonth)))))
+  }
+  return addMonths(reminder.dueDate, 1)
+}
+
+export function markReminderPaid(state: FinancialState, reminderId: number, paidAt = new Date().toISOString()): FinancialState {
+  const reminder = state.reminders.find((item) => item.id === reminderId)
+  if (!reminder || reminder.completed) return state
+  const paymentId = reminder.paidMovementId || Date.now()
+  const payment: Movement = { id: paymentId, name: `Pago confirmado · ${reminder.name}`, category: reminder.category, amount: reminder.expectedAmount, kind: 'expense', date: reminder.dueDate, timestamp: paidAt, color: 'rose', source: `reminder-payment:${reminder.id}:${reminder.dueDate}`, recurrence: 'one-time' }
+  const nextDate = nextReminderDate(reminder)
+  const nextId = nextDate ? paymentId + 1 : undefined
+  const nextReminder = nextDate ? { ...reminder, id: nextId as number, dueDate: nextDate, firstPaymentDate: nextDate, completed: false, paidAt: undefined, paidMovementId: undefined, generatedNextId: undefined } : null
+  const updated = { ...reminder, completed: true, paidAt, paidMovementId: paymentId, generatedNextId: nextId, status: 'paid' as const }
+  return { ...state, movements: state.movements.some((item) => item.id === payment.id) ? state.movements : [payment, ...state.movements], reminders: [...state.reminders.map((item) => item.id === reminderId ? updated : item), ...(nextReminder ? [nextReminder] : [])] }
+}
+
+export function reverseReminderPayment(state: FinancialState, reminderId: number): FinancialState {
+  const reminder = state.reminders.find((item) => item.id === reminderId)
+  if (!reminder?.completed) return state
+  return { ...state, movements: state.movements.filter((item) => item.id !== reminder.paidMovementId && item.source !== `reminder-payment:${reminder.id}:${reminder.dueDate}`), reminders: state.reminders.filter((item) => item.id !== reminder.generatedNextId).map((item) => item.id === reminderId ? { ...item, completed: false, paidAt: undefined, paidMovementId: undefined, generatedNextId: undefined, status: undefined } : item) }
+}
+
+export function pendingObligations(state: FinancialState) { return state.reminders.filter((item) => !item.completed).reduce((sum, item) => sum + item.expectedAmount, 0) }
 export function getDailySummary(state: FinancialState, date = DEMO_TODAY) {
   const movements = state.movements.filter((item) => item.date === date && !item.planned); const contributions = state.contributions.filter((item) => item.date === date)
   const income = movements.filter((item) => item.kind === 'income').reduce((sum, item) => sum + item.amount, 0); const expenses = movements.filter((item) => item.kind === 'expense').reduce((sum, item) => sum + item.amount, 0); const savings = contributions.reduce((sum, item) => sum + item.amount, 0)

@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { emptyFinancialState } from '../src/finance'
-import { parseWorkspace, readWorkspace, saveWorkspace, trialDaysRemaining, trialExpired, WORKSPACE_STORAGE_KEY, type PersistedWorkspace } from '../src/persistence'
+import { decryptWorkspace, encryptWorkspace, inspectWorkspaceStorage, parseWorkspace, readWorkspace, saveWorkspace, trialDaysRemaining, trialExpired, WORKSPACE_STORAGE_KEY, type PersistedWorkspace } from '../src/persistence'
 
 class MemoryStorage {
   private values = new Map<string, string>()
   getItem(key: string) { return this.values.get(key) ?? null }
   setItem(key: string, value: string) { this.values.set(key, value) }
+  removeItem(key: string) { this.values.delete(key) }
 }
 
 const workspace: PersistedWorkspace = {
@@ -66,5 +67,24 @@ describe('workspace persistence', () => {
     expect(trialDaysRemaining(workspace.profile, workspace.profile.trialEndsAt)).toBe(0)
     expect(trialExpired(workspace.profile, workspace.profile.trialEndsAt - 1)).toBe(false)
     expect(trialExpired(workspace.profile, workspace.profile.trialEndsAt)).toBe(true)
+  })
+
+  it('encrypts the workspace and rejects an incorrect password', async () => {
+    const storage = new MemoryStorage()
+    const envelope = await encryptWorkspace({ ...workspace, version: 2 }, 'rumbo-seguro-123')
+    storage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify(envelope))
+    expect(storage.getItem(WORKSPACE_STORAGE_KEY)).not.toContain('Café')
+    expect(inspectWorkspaceStorage(storage).kind).toBe('encrypted')
+    await expect(decryptWorkspace(envelope, 'incorrecta-123')).rejects.toThrow('contraseña')
+    const restored = await decryptWorkspace(envelope, 'rumbo-seguro-123')
+    expect(restored.workspace.financial.movements[0].name).toBe('Café')
+  })
+
+  it('keeps a legacy workspace available for explicit migration', () => {
+    const storage = new MemoryStorage()
+    saveWorkspace(workspace, storage)
+    const inspection = inspectWorkspaceStorage(storage)
+    expect(inspection.kind).toBe('legacy')
+    expect(readWorkspace(storage).value?.profile.name).toBe('Bryan')
   })
 })

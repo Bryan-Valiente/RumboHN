@@ -8,6 +8,9 @@ import {
   getDailyReport,
   getDailySummary,
   initialFinancialState,
+  markReminderPaid,
+  nextReminderDate,
+  reverseReminderPayment,
   type FinancialState,
   type Movement,
   type SavingsGoal,
@@ -113,6 +116,29 @@ describe('calculateSummary', () => {
     }))
 
     expect(summary.availableBalance).toBe(300)
+    expect(summary.pendingObligations).toBe(200)
+    expect(summary.projectedBalance).toBe(100)
+  })
+
+  it('keeps a monthly obligation pending until payment confirmation', () => {
+    const state = makeState({ reminders: [{ id: 10, name: 'Luz', category: 'Electricidad', expectedAmount: 300, dueDate: '2026-11-30', recurrence: 'monthly', reminderDaysBefore: 3, completed: false, notes: '' }] })
+    expect(calculateSummary(state).balance).toBe(300)
+    const paid = markReminderPaid(state, 10, '2026-11-18T10:00:00.000-06:00')
+    expect(calculateSummary(paid).balance).toBe(0)
+    expect(paid.movements.filter((item) => item.source?.startsWith('reminder-payment:10'))).toHaveLength(1)
+    expect(paid.reminders.find((item) => item.id === 10)?.completed).toBe(true)
+    expect(paid.reminders.find((item) => item.id !== 10)?.dueDate).toBe('2026-12-30')
+    expect(markReminderPaid(paid, 10).movements).toHaveLength(1)
+    const reversed = reverseReminderPayment(paid, 10)
+    expect(calculateSummary(reversed).balance).toBe(300)
+    expect(reversed.reminders).toHaveLength(1)
+    expect(reversed.reminders[0].completed).toBe(false)
+  })
+
+  it('uses distinct calendar rules for fifteen-day and twice-monthly schedules', () => {
+    expect(nextReminderDate({ id: 1, name: 'A', category: 'Internet', expectedAmount: 1, dueDate: '2026-11-12', recurrence: 'every-15-days', reminderDaysBefore: 1, completed: false, notes: '' })).toBe('2026-11-27')
+    expect(nextReminderDate({ id: 2, name: 'B', category: 'Agua', expectedAmount: 1, dueDate: '2026-11-15', recurrence: 'twice-monthly', twiceMonthlyDays: [15, 30], reminderDaysBefore: 1, completed: false, notes: '' })).toBe('2026-11-30')
+    expect(nextReminderDate({ id: 3, name: 'C', category: 'Agua', expectedAmount: 1, dueDate: '2026-11-30', recurrence: 'twice-monthly', twiceMonthlyDays: [15, 31], reminderDaysBefore: 1, completed: false, notes: '' })).toBe('2026-12-15')
   })
 })
 
