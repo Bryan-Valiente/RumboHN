@@ -56,7 +56,7 @@ Este contrato es una propuesta compartida, no una API existente. La versión ini
 - JSON UTF-8; `Content-Type: application/json`.
 - Fechas de calendario como `YYYY-MM-DD` en la zona horaria declarada por el perfil.
 - Marcas de tiempo como ISO-8601 UTC.
-- El API persistente expresará los importes monetarios en HNL, como lempiras con dos decimales, por ejemplo `15000.00`; `currency` será `"HNL"`.
+- El API persistente expresará los importes monetarios en HNL, como cadenas decimales con dos posiciones, por ejemplo `"15000.00"`; `currency` será `"HNL"`. Esta representación evita pérdida de precisión por números de punto flotante en JSON.
 - Una conversión opcional a USD podrá acompañar una respuesta únicamente como dato informativo, con su contexto de referencia cuando esté disponible. Nunca reemplazará el importe HNL ni se usará como base de saldos, validaciones, pagos o persistencia.
 - El servidor obtiene `userId` de la sesión autenticada. El cliente nunca puede elegir el titular mediante el body, query string o un ID ajeno.
 - Las mutaciones que puedan repetirse aceptarán una clave de idempotencia; el alcance exacto se definirá antes de implementar pagos, aportes y confirmaciones.
@@ -141,7 +141,7 @@ Los nombres son contractuales a nivel conceptual; el esquema físico queda pendi
 {
   "id": "opaque-id",
   "userId": "server-derived-user-id",
-  "amount": 15000.00,
+  "amount": "15000.00",
   "currency": "HNL",
   "date": "2026-11-18",
   "createdAt": "2026-11-18T18:00:00Z",

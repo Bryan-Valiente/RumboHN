@@ -1,0 +1,35 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    ['GET', '/api/v1/health', 'public'],
+    ['POST', '/api/v1/auth/register', 'disabled'],
+    ['POST', '/api/v1/auth/login', 'disabled'],
+    ['POST', '/api/v1/auth/logout', 'protected'],
+    ['GET', '/api/v1/auth/session', 'protected'],
+    ['POST', '/api/v1/auth/password/forgot', 'disabled'],
+    ['POST', '/api/v1/auth/password/reset', 'disabled'],
+    ['GET', '/api/v1/me/profile', 'protected'],
+    ['PATCH', '/api/v1/me/profile', 'protected'],
+    ['GET', '/api/v1/movements', 'protected'],
+    ['POST', '/api/v1/movements', 'protected'],
+    ['GET', '/api/v1/movements/{movementId}', 'protected'],
+    ['PATCH', '/api/v1/movements/{movementId}', 'protected'],
+    ['DELETE', '/api/v1/movements/{movementId}', 'protected'],
+    ['GET', '/api/v1/budgets', 'protected'],
+    ['POST', '/api/v1/budgets', 'protected'],
+    ['PATCH', '/api/v1/budgets/{budgetId}', 'protected'],
+    ['GET', '/api/v1/goals', 'protected'],
+    ['POST', '/api/v1/goals', 'protected'],
+    ['PATCH', '/api/v1/goals/{goalId}', 'protected'],
+    ['GET', '/api/v1/goals/{goalId}/contributions', 'protected'],
+    ['POST', '/api/v1/goals/{goalId}/contributions', 'protected'],
+    ['GET', '/api/v1/reminders', 'protected'],
+    ['POST', '/api/v1/reminders', 'protected'],
+    ['PATCH', '/api/v1/reminders/{reminderId}', 'protected'],
+    ['POST', '/api/v1/reminders/{reminderId}/payments', 'protected'],
+    ['GET', '/api/v1/reports/daily', 'protected'],
+    ['GET', '/api/v1/notifications', 'protected'],
+    ['PATCH', '/api/v1/notification-preferences', 'protected'],
+];
