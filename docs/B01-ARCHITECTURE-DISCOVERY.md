@@ -23,11 +23,11 @@ Baseline revisado: `main` en `a28aa290cf2b5c7064a72bae7f27d931e636e6a9`.
 - También existe compatibilidad de lectura/migración explícita para el workspace legado en JSON. No debe borrarse ni convertirse automáticamente en datos remotos.
 - El acceso actual es un desbloqueo local de la demo. El formulario de autenticación visual no constituye registro, sesión, recuperación ni aislamiento de cuentas.
 
-### Discrepancia financiera que bloquea una migración automática
+### Regla financiera para el contrato
 
-La documentación de producto propone importes persistidos en centavos enteros, pero los tipos actuales (`Movement`, `Budget`, `SavingsGoal`, `SavingsContribution` y `Reminder`) usan `number` y las semillas representan HNL directamente, por ejemplo `15000` para L 15,000. La función `calculateSavingsPlan` usa centavos internamente para redondear, pero no cambia el contrato persistido actual.
+Los tipos actuales (`Movement`, `Budget`, `SavingsGoal`, `SavingsContribution` y `Reminder`) usan `number` y las semillas representan HNL directamente, por ejemplo `15000` para L 15,000. El contrato API usará HNL como moneda principal, expresada en lempiras con dos decimales. La función `calculateSavingsPlan` puede usar centavos internamente para redondear, pero ese detalle no forma parte del formato contractual.
 
-Conclusión: antes de crear tablas o importar datos se debe aprobar una conversión explícita `HNL number → integer cents`, con reglas de redondeo, reporte de valores no válidos y pruebas de equivalencia. No se debe interpretar el JSON local existente como si ya estuviera en centavos.
+La conversión opcional a USD podrá incluirse únicamente como referencia informativa. No sustituirá el importe HNL, no cambiará la moneda principal y no será autoridad para saldos, validaciones, pagos ni persistencia contable. La migración debe validar y normalizar los importes HNL a dos decimales, reportando valores rechazados o ajustados; no se debe reinterpretar el JSON local existente con otra unidad.
 
 ## 2. Superficies de ownership de Bryan
 
@@ -56,7 +56,8 @@ Este contrato es una propuesta compartida, no una API existente. La versión ini
 - JSON UTF-8; `Content-Type: application/json`.
 - Fechas de calendario como `YYYY-MM-DD` en la zona horaria declarada por el perfil.
 - Marcas de tiempo como ISO-8601 UTC.
-- El API persistente usará importes enteros en centavos de HNL; la interfaz podrá formatearlos como lempiras.
+- El API persistente expresará los importes monetarios en HNL, como lempiras con dos decimales, por ejemplo `15000.00`; `currency` será `"HNL"`.
+- Una conversión opcional a USD podrá acompañar una respuesta únicamente como dato informativo, con su contexto de referencia cuando esté disponible. Nunca reemplazará el importe HNL ni se usará como base de saldos, validaciones, pagos o persistencia.
 - El servidor obtiene `userId` de la sesión autenticada. El cliente nunca puede elegir el titular mediante el body, query string o un ID ajeno.
 - Las mutaciones que puedan repetirse aceptarán una clave de idempotencia; el alcance exacto se definirá antes de implementar pagos, aportes y confirmaciones.
 
@@ -140,7 +141,7 @@ Los nombres son contractuales a nivel conceptual; el esquema físico queda pendi
 {
   "id": "opaque-id",
   "userId": "server-derived-user-id",
-  "amountCents": 1500000,
+  "amount": 15000.00,
   "currency": "HNL",
   "date": "2026-11-18",
   "createdAt": "2026-11-18T18:00:00Z",
@@ -148,7 +149,7 @@ Los nombres son contractuales a nivel conceptual; el esquema físico queda pendi
 }
 ```
 
-Los campos específicos de movimiento, presupuesto, meta, aporte y recordatorio deben conservar la semántica ya visible en `src/finance.ts`, pero con validación server-side y sin copiar semillas ficticias al ambiente real.
+Los campos específicos de movimiento, presupuesto, meta, aporte y recordatorio deben conservar la semántica ya visible en `src/finance.ts`, pero con validación server-side y sin copiar semillas ficticias al ambiente real. Si se ofrece un equivalente en USD, será opcional, informativo y separado del importe HNL autorizado.
 
 ## 4. Modelos y salvaguardas requeridos
 
@@ -180,10 +181,10 @@ Membresías, cobros, conexión bancaria y números completos de tarjeta quedan f
 - No existe una base creada que pueda inspeccionarse desde este repositorio.
 - El workspace local cifrado es un formato de demo del navegador, no una fuente autorizada de datos reales.
 - No se importarán semillas `starter*` ni registros ficticios como cuentas reales.
-- La migración futura debe comenzar con inventario, respaldo, conteos, validación, conversión explícita a centavos y simulación sin escritura.
+- La migración futura debe comenzar con inventario, respaldo, conteos, validación de importes HNL con dos decimales y simulación sin escritura.
 - Debe existir una ruta de exportación/backup y una prueba de restauración antes de aceptar datos reales.
 - Los workspaces legados deben conservarse hasta que una migración aprobada confirme equivalencia; nunca se debe limpiar `localStorage` para ocultar incompatibilidades.
-- La conversión de importes actuales `number` a `amountCents` necesita una regla aprobada de redondeo y un reporte de cada valor rechazado o ajustado.
+- La normalización de los importes actuales `number` a HNL con dos decimales necesita una regla aprobada de redondeo y un reporte de cada valor rechazado o ajustado. Cualquier equivalente USD debe permanecer informativo y no autoritativo.
 
 ## 6. Dependencias y orden de implementación
 
@@ -218,4 +219,4 @@ Membresías, cobros, conexión bancaria y números completos de tarjeta quedan f
 
 ## Próximo loop ejecutable
 
-**B01-L02 — contrato y esqueleto de backend en ambiente local aislado**, condicionado a aprobar el proveedor de autenticación, motor/version de base de datos, semántica de `amountCents` y límites del ambiente de ensayo. No incluye credenciales, datos reales, producción ni merge a `main`.
+**B01-L02 — contrato y esqueleto de backend en ambiente local aislado**, condicionado a aprobar el proveedor de autenticación, motor/version de base de datos, precisión de los importes HNL y límites del ambiente de ensayo. No incluye credenciales, datos reales, producción ni merge a `main`.
