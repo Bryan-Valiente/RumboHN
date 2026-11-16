@@ -35,6 +35,11 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
 .login-copy { max-width: 425px; margin: 0 0 32px; color: var(--muted); font-size: 15px; line-height: 1.6; }.login-panel form { display: grid; gap: 16px; }
 label { display: grid; gap: 7px; color: var(--ink); font-size: 12px; font-weight: 700; }
 input, select { width: 100%; min-height: 45px; padding: 10px 12px; border: 1px solid #bdcbc3; border-radius: 8px; color: var(--ink); background: var(--surface); transition: border-color .18s ease, box-shadow .18s ease; }
+.password-field { position: relative; display: block; }
+.password-field input { padding-right: 48px; }
+.password-toggle { position: absolute; top: 7px; right: 8px; display: grid; width: 31px; height: 31px; place-items: center; border: 0; border-radius: 6px; color: var(--navy); background: transparent; }
+.password-toggle:hover { background: #ecf1ed; }
+.password-toggle svg { width: 18px; height: 18px; }
 input:hover, select:hover { border-color: #879d94; } input:focus, select:focus { border-color: #487765; box-shadow: 0 0 0 3px rgba(61, 130, 97, .13); outline: none; }
 .button { display: inline-flex; min-height: 43px; align-items: center; justify-content: center; gap: 8px; border: 1px solid transparent; border-radius: 9px; padding: 10px 15px; font-size: 13px; font-weight: 800; transition: transform .18s ease, background .18s ease, border-color .18s ease; }
 .button:hover { transform: translateY(-1px); }.button-primary { color: #f8fbf8; background: var(--navy); box-shadow: 0 9px 18px rgba(23, 52, 71, .17); }.button-primary:hover { background: #27566a; }

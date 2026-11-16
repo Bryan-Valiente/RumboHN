@@ -7,6 +7,7 @@ const elements = {
   loginForm: document.querySelector('#login-form'),
   loginUsername: document.querySelector('#login-username'),
   loginPassword: document.querySelector('#login-password'),
+  passwordToggle: document.querySelector('#login-password-toggle'),
   loginMessage: document.querySelector('#login-message'),
   appMessage: document.querySelector('#app-message'),
   operatorName: document.querySelector('#operator-name'),
@@ -36,6 +37,16 @@ function endpoint(path) {
   return new URL(path.replace(/^\//, ''), apiBase);
 }
 
+function isObject(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isSuccessEnvelope(payload) {
+  return isObject(payload)
+    && Object.prototype.hasOwnProperty.call(payload, 'data')
+    && isObject(payload.meta);
+}
+
 async function request(path, options = {}) {
   const method = options.method || 'GET';
   const headers = new Headers(options.headers || {});
@@ -49,9 +60,19 @@ async function request(path, options = {}) {
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
   });
   const payload = await response.json().catch(() => null);
-  if (!response.ok || !payload || !payload.ok) {
-    const error = new Error((payload && payload.error && payload.error.message) || 'No se pudo completar la operación.');
-    error.code = payload && payload.error ? payload.error.code : undefined;
+  const errorPayload = isObject(payload && payload.error) ? payload.error : null;
+  if (!response.ok || !isSuccessEnvelope(payload)) {
+    const fallbackMessage = response.ok
+      ? 'El servicio devolvió una respuesta no válida.'
+      : 'No se pudo completar la operación.';
+    const error = new Error(
+      typeof errorPayload?.message === 'string' && errorPayload.message !== ''
+        ? errorPayload.message
+        : fallbackMessage,
+    );
+    error.code = typeof errorPayload?.code === 'string' ? errorPayload.code : undefined;
+    error.details = errorPayload?.details;
+    error.requestId = typeof errorPayload?.requestId === 'string' ? errorPayload.requestId : undefined;
     throw error;
   }
   return payload;
@@ -106,6 +127,14 @@ function showLogin(message = '') {
   elements.adminView.hidden = true;
   elements.loginView.hidden = false;
   elements.loginMessage.textContent = message;
+}
+
+function updatePasswordToggle() {
+  const visible = elements.loginPassword.type === 'text';
+  const label = visible ? 'Ocultar contraseña' : 'Mostrar contraseña';
+  elements.passwordToggle.setAttribute('aria-label', label);
+  elements.passwordToggle.setAttribute('aria-pressed', String(visible));
+  elements.passwordToggle.title = label;
 }
 
 function setConnection(online) {
@@ -375,6 +404,18 @@ elements.loginForm.addEventListener('submit', async (event) => {
     elements.loginMessage.textContent = error.message;
   }
 });
+
+elements.passwordToggle.addEventListener('click', () => {
+  const selectionStart = elements.loginPassword.selectionStart;
+  const selectionEnd = elements.loginPassword.selectionEnd;
+  elements.loginPassword.type = elements.loginPassword.type === 'password' ? 'text' : 'password';
+  updatePasswordToggle();
+  elements.loginPassword.focus({ preventScroll: true });
+  if (selectionStart !== null && selectionEnd !== null) {
+    elements.loginPassword.setSelectionRange(selectionStart, selectionEnd);
+  }
+});
+updatePasswordToggle();
 
 elements.logout.addEventListener('click', async () => {
   try {

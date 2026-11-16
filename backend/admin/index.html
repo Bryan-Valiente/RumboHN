@@ -26,7 +26,13 @@
           </label>
           <label>
             Contraseña
-            <input id="login-password" name="password" type="password" autocomplete="current-password" required minlength="12" maxlength="128" />
+            <span class="password-field">
+              <input id="login-password" name="password" type="password" autocomplete="current-password" required minlength="12" maxlength="128" />
+              <button id="login-password-toggle" class="password-toggle" type="button" aria-label="Mostrar contraseña" aria-pressed="false" aria-controls="login-password" title="Mostrar contraseña">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M2.6 12s3.2-5.2 9.4-5.2S21.4 12 21.4 12 18.2 17.2 12 17.2 2.6 12 2.6 12Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12" r="2.7" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+                <span class="sr-only">Mostrar contraseña</span>
+              </button>
+            </span>
           </label>
           <p class="form-message" id="login-message" role="status" aria-live="polite"></p>
           <button class="button button-primary" type="submit">Entrar al panel <span aria-hidden="true">→</span></button>
