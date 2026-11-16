@@ -17,10 +17,12 @@ export function answerAssistant(question: string, state: FinancialState, summary
     return topCategory ? `En esta demostración, tu categoría con más gastos es ${topCategory[0].toLowerCase()}, con ${formatAssistantMoney(topCategory[1])} registrados.` : 'Todavía no hay gastos registrados para comparar.'
   }
   if (normalized.includes('queda') || normalized.includes('saldo')) {
-    return `Según tus movimientos de demostración, te quedan ${formatAssistantMoney(summary.balance)} disponibles.`
+    return `Tu saldo total de demostración es ${formatAssistantMoney(summary.balance)}. Después de separar ahorros, tenés ${formatAssistantMoney(summary.availableBalance)} disponibles para gastar.`
   }
   if (normalized.includes('ahorrar')) {
-    const suggested = Math.max(100, Math.round(Math.max(summary.balance, 0) * .05))
+    const spendable = Math.max(summary.availableBalance, 0)
+    if (!spendable) return 'En esta demostración no queda dinero disponible para separar. Revisá tus movimientos y aportes antes de planear otro ahorro.'
+    const suggested = Math.min(spendable, Math.max(100, Math.round(spendable * .05)))
     return `Podés probar separando ${formatAssistantMoney(suggested)} este mes. Es una sugerencia educativa, no una recomendación de inversión.`
   }
   if (normalized.includes('presupuesto')) {
