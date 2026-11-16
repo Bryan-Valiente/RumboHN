@@ -61,7 +61,12 @@ Los endpoints, envelopes y códigos de error de B01-L01 no cambian. La precisió
 ## Ejecución remota
 
 - Evidencia inicial: base vacía y cuenta restringida a la base RUMBO confirmadas.
-- Migración 001: pendiente de registrar aquí después de su aplicación y validación.
+- Migración 001: aplicada correctamente mediante phpMyAdmin a `u149165412_asesor`.
+- SHA-256 del SQL local y del archivo publicado usado para la ejecución: `03779a37109458b475d5e94a61f0ed2fe8eb8b19467980a44e2d8e562c50eeca`.
+- Verificación posterior: 18 tablas base, 4 vistas, 20 columnas `DECIMAL(15,2)`, 19 claves foráneas, 39 restricciones `CHECK` y cero tablas fuera de InnoDB.
+- `schema_migrations` contiene la versión `001` exactamente una vez.
+- La base quedó sin usuarios, movimientos, aportes ni pagos.
+- Prueba transaccional remota: `15000.00 HNL` se conservó exactamente, la vista calculó `15000.00`, un reintento con la misma clave mantuvo una sola fila idempotente y `ROLLBACK` devolvió usuarios, movimientos e idempotencia a cero.
 - Backend PHP: no desplegado en este loop.
 
 ## Próximo loop

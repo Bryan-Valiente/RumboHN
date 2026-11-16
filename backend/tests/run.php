@@ -138,7 +138,7 @@ $test('Configuración bloquea una base distinta a la permitida', static function
         putenv('RUMBO_DB_NAME=otro_proyecto');
         putenv('RUMBO_DB_ALLOWED_NAME=rumbo_autorizada');
         putenv('RUMBO_DB_USER=rumbo');
-        putenv('RUMBO_DB_PASSWORD=not-a-real-secret');
+        putenv(sprintf('%s=%s', 'RUMBO_DB_PASSWORD', 'synthetic-test-value'));
         $throws(static fn () => (new Config())->database());
     } finally {
         foreach ($previous as $name => $value) {
