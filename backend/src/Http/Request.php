@@ -8,13 +8,17 @@ use JsonException;
 
 final class Request
 {
-    /** @param array<string, string> $headers */
+    /** @param array<string, string> $headers @param array<string, string> $cookies */
     public function __construct(
         public readonly string $method,
         public readonly string $path,
         public readonly array $headers,
         public readonly string $requestId,
         private readonly string $rawBody,
+        private readonly array $cookies = [],
+        public readonly ?string $clientIp = null,
+        public readonly ?string $userAgent = null,
+        private readonly array $query = [],
     ) {
     }
 
@@ -45,12 +49,54 @@ final class Request
         }
 
         $rawBody = file_get_contents('php://input');
-        return new self($method, self::normalizePath($path), $headers, $requestId, $rawBody === false ? '' : $rawBody);
+        $cookies = [];
+        foreach ($_COOKIE as $name => $value) {
+            if (is_string($name) && is_string($value)) {
+                $cookies[$name] = $value;
+            }
+        }
+
+        $clientIp = isset($_SERVER['REMOTE_ADDR']) && is_string($_SERVER['REMOTE_ADDR'])
+            ? $_SERVER['REMOTE_ADDR']
+            : null;
+        $userAgent = $headers['user-agent'] ?? null;
+        $query = [];
+        $queryString = parse_url($uri, PHP_URL_QUERY);
+        if (is_string($queryString)) {
+            parse_str($queryString, $query);
+        }
+
+        return new self(
+            $method,
+            self::normalizePath($path),
+            $headers,
+            $requestId,
+            $rawBody === false ? '' : $rawBody,
+            $cookies,
+            $clientIp,
+            $userAgent,
+            $query,
+        );
     }
 
     public function header(string $name): ?string
     {
         return $this->headers[strtolower($name)] ?? null;
+    }
+
+    public function cookie(string $name): ?string
+    {
+        return $this->cookies[$name] ?? null;
+    }
+
+    public function query(string $name): mixed
+    {
+        return $this->query[$name] ?? null;
+    }
+
+    public function isStateChanging(): bool
+    {
+        return in_array($this->method, ['POST', 'PUT', 'PATCH', 'DELETE'], true);
     }
 
     /** @return array<string, mixed> */

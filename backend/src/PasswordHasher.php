@@ -26,11 +26,26 @@ final class PasswordHasher
         return password_verify($password, $hash);
     }
 
+    public static function needsRehash(string $hash): bool
+    {
+        $algorithm = defined('PASSWORD_ARGON2ID') ? PASSWORD_ARGON2ID : PASSWORD_DEFAULT;
+        return password_needs_rehash($hash, $algorithm);
+    }
+
     public static function assertAcceptable(string $password): void
     {
         $length = strlen($password);
-        if ($length < 12 || $length > 4096) {
-            throw new InvalidArgumentException('La contraseña debe contener entre 12 y 4096 bytes.');
+        if ($length < 12 || $length > 128) {
+            throw new InvalidArgumentException('La contraseña debe contener entre 12 y 128 bytes.');
+        }
+
+        $classes = 0;
+        $classes += preg_match('/[a-z]/', $password) === 1 ? 1 : 0;
+        $classes += preg_match('/[A-Z]/', $password) === 1 ? 1 : 0;
+        $classes += preg_match('/[0-9]/', $password) === 1 ? 1 : 0;
+        $classes += preg_match('/[^A-Za-z0-9]/', $password) === 1 ? 1 : 0;
+        if ($classes < 3) {
+            throw new InvalidArgumentException('La contraseña debe combinar al menos tres tipos de caracteres.');
         }
     }
 }

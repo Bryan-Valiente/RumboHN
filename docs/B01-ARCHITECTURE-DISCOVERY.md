@@ -100,7 +100,7 @@ Colección paginada:
 }
 ```
 
-Códigos mínimos propuestos: `AUTH_REQUIRED`, `AUTH_INVALID`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_ERROR`, `CONFLICT`, `IDEMPOTENCY_CONFLICT`, `RATE_LIMITED` y `INTERNAL_ERROR`. No se deben mostrar stack traces ni detalles de conexión al cliente.
+Códigos mínimos propuestos: `AUTH_REQUIRED`, `AUTH_INVALID`, `AUTH_NOT_AVAILABLE`, `CSRF_INVALID`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_ERROR`, `CONFLICT`, `IDEMPOTENCY_CONFLICT`, `RATE_LIMITED` y `INTERNAL_ERROR`. No se deben mostrar stack traces ni detalles de conexión al cliente.
 
 ### Autenticación y sesión
 
@@ -122,6 +122,7 @@ El mecanismo concreto de sesión, proveedor de correo, requisitos de contraseña
 | GET/PATCH | `/api/v1/me/profile` | Leer o cambiar zona horaria, preferencias y datos de perfil permitidos. |
 | GET/POST | `/api/v1/movements` | Listar o crear movimientos del titular. |
 | GET/PATCH/DELETE | `/api/v1/movements/{movementId}` | Consultar o modificar un movimiento propio. |
+| GET | `/api/v1/financial-summary` | Resumen derivado por titular: ingresos y egresos confirmados, saldo total, ahorro asignado, saldo disponible, obligaciones pendientes y saldo proyectado. |
 | GET/POST/PATCH | `/api/v1/budgets` | Gestionar presupuestos por categoría y periodo. |
 | GET/POST/PATCH | `/api/v1/goals` | Gestionar metas de ahorro. |
 | GET/POST | `/api/v1/goals/{goalId}/contributions` | Consultar o crear aportes pertenecientes a la misma meta y usuario. |
@@ -150,6 +151,26 @@ Los nombres son contractuales a nivel conceptual; el esquema físico queda pendi
 ```
 
 Los campos específicos de movimiento, presupuesto, meta, aporte y recordatorio deben conservar la semántica ya visible en `src/finance.ts`, pero con validación server-side y sin copiar semillas ficticias al ambiente real. Si se ofrece un equivalente en USD, será opcional, informativo y separado del importe HNL autorizado.
+
+Extensión B01-L03 para `GET /api/v1/financial-summary`:
+
+```json
+{
+  "data": {
+    "confirmedIncome": "15000.00",
+    "confirmedExpenses": "1500.50",
+    "totalBalance": "13500.50",
+    "savingsAllocated": "1000.00",
+    "availableBalance": "12500.50",
+    "pendingObligations": "800.00",
+    "projectedBalance": "12700.50",
+    "currency": "HNL"
+  },
+  "meta": { "requestId": "opaque-request-id" }
+}
+```
+
+Los movimientos `planned` y recordatorios aún no pagados no reducen `totalBalance`. Las obligaciones pendientes solo afectan `projectedBalance`; cuando un pago se confirma, el recordatorio deja de estar pendiente y el movimiento confirmado se deduce una sola vez.
 
 ## 4. Modelos y salvaguardas requeridos
 

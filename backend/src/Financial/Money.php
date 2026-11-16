@@ -29,4 +29,22 @@ final class Money
 
         return $normalized;
     }
+
+    public static function formatDatabase(string $value, bool $allowZero = true): string
+    {
+        return self::normalizeHnl($value, $allowZero);
+    }
+
+    public static function formatDatabaseSigned(string $value): string
+    {
+        $value = trim($value);
+        if (!preg_match('/^-?(0|[1-9][0-9]{0,12})(?:\.([0-9]{1,2}))?$/', $value, $matches)) {
+            throw new InvalidArgumentException('El importe almacenado no tiene precisión HNL válida.');
+        }
+
+        $negative = str_starts_with($value, '-') && !preg_match('/^-0(?:\.0{1,2})?$/', $value);
+        $integer = ltrim($matches[1], '-');
+        $fraction = str_pad($matches[2] ?? '', 2, '0');
+        return sprintf('%s%s.%s', $negative ? '-' : '', $integer, $fraction);
+    }
 }

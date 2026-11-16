@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Rumbo\Backend\Auth\CsrfGuard;
 use Rumbo\Backend\Auth\SessionAuthenticator;
 use Rumbo\Backend\Config;
 use Rumbo\Backend\Database;
@@ -19,8 +20,8 @@ try {
     $config = new Config();
     OriginGuard::assertAllowed($request, $config);
     $database = new Database($config);
-    $router = new Router(new SessionAuthenticator($database));
-    Routes::register($router, $database, $backendRoot . '/config/routes.php');
+    $router = new Router(new SessionAuthenticator($database, $config), new CsrfGuard($config));
+    Routes::register($router, $database, $config, $backendRoot . '/config/routes.php');
     $router->dispatch($request);
 } catch (ApiException $exception) {
     JsonResponse::error(
