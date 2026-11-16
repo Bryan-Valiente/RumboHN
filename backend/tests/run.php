@@ -12,6 +12,7 @@ use Rumbo\Backend\Auth\SessionAuthenticator;
 use Rumbo\Backend\Auth\SessionCookieManager;
 use Rumbo\Backend\Config;
 use Rumbo\Backend\Database;
+use Rumbo\Backend\Admin\AdminProvisioner;
 use Rumbo\Backend\Financial\FinancialSummaryRepository;
 use Rumbo\Backend\Financial\Money;
 use Rumbo\Backend\Financial\MovementRepository;
@@ -172,12 +173,13 @@ $test('Migración 001 sigue aditiva, HNL decimal e InnoDB', static function () u
 
 $test('Catálogo mantiene auth y finanzas protegidas, incluida la superficie admin', static function () use ($backendRoot, $assert, $assertSame): void {
     $routes = require $backendRoot . '/config/routes.php';
-    $assertSame(43, count($routes));
+    $assertSame(44, count($routes));
     $indexed = [];
     foreach ($routes as $route) {
         $indexed[$route[0] . ' ' . $route[1]] = $route[2];
     }
     $assertSame('public', $indexed['POST /api/v1/auth/login']);
+    $assertSame('public', $indexed['POST /api/v1/admin/auth/login']);
     $assertSame('public', $indexed['POST /api/v1/auth/register']);
     $assertSame('protected', $indexed['GET /api/v1/movements']);
     $assertSame('protected', $indexed['GET /api/v1/financial-summary']);
@@ -352,6 +354,38 @@ if (!in_array('sqlite', PDO::getAvailableDrivers(), true)) {
             'rumbo_session' => (string) $login2['sessionToken'],
         ]);
         $throwsApi(static fn () => $authenticator->authenticate($expired), 'AUTH_INVALID');
+    });
+
+    $test('Provisión administrativa usa username sin crear correo falso y login separado', static function () use ($context, $assert, $assertSame, $throwsApi): void {
+        $ctx = $context();
+        (new AdminProvisioner($ctx['pdo'], $ctx['config']))->provision(
+            'rumbohn2026',
+            'Rumbo-Admin-Segura-2026!',
+            'Operador RUMBO',
+        );
+        $record = $ctx['pdo']->query("SELECT email, username, status FROM users WHERE username = 'rumbohn2026'")->fetch();
+        $assert(is_array($record));
+        $assertSame(null, $record['email']);
+        $assertSame('active', $record['status']);
+
+        $login = $ctx['auth']->loginAdmin([
+            'username' => 'rumbohn2026',
+            'password' => 'Rumbo-Admin-Segura-2026!',
+        ], '127.0.0.1', 'Rumbo-Admin-Test');
+        $assertSame('rumbohn2026', $login['profile']['username']);
+        $assertSame(null, $login['profile']['email']);
+        $assertSame(['admin', 'member'], $login['profile']['roles']);
+
+        $request = new Request('GET', '/api/v1/auth/session', [], str_repeat('b', 32), '', [
+            'rumbo_session' => (string) $login['sessionToken'],
+        ]);
+        $authenticated = (new SessionAuthenticator($ctx['pdo'], $ctx['config']))->authenticate($request);
+        $assertSame(null, $authenticated->email);
+        AdminAuthorizer::assertAdmin($authenticated);
+        $throwsApi(static fn () => $ctx['auth']->loginAdmin([
+            'username' => 'rumbohn2026',
+            'password' => 'Rumbo-Admin-Incorrecta-2026!',
+        ], '127.0.0.1', null), 'AUTH_INVALID');
     });
 
     $test('CSRF protege mutaciones por cookie y permite bearer explícito', static function () use ($context, $createActive, $throwsApi): void {

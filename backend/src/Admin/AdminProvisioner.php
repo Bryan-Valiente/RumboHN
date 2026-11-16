@@ -5,16 +5,17 @@ declare(strict_types=1);
 namespace Rumbo\Backend\Admin;
 
 use PDO;
+use PDOException;
 use Rumbo\Backend\Audit\AuditLogger;
 use Rumbo\Backend\Auth\AuthRepository;
-use Rumbo\Backend\Auth\AuthService;
-use Rumbo\Backend\Auth\UnavailablePasswordResetDelivery;
 use Rumbo\Backend\Config;
 use Rumbo\Backend\Http\ApiException;
-use Rumbo\Backend\Profile\ProfileRepository;
+use Rumbo\Backend\Http\Input;
+use Rumbo\Backend\PasswordHasher;
 use Rumbo\Backend\Support\Dates;
 use Rumbo\Backend\Support\SystemClock;
 use Rumbo\Backend\TransactionRunner;
+use Rumbo\Backend\Support\Uuid;
 
 /**
  * CLI-only provisioning service. No HTTP route may invoke this class.
@@ -25,58 +26,54 @@ final class AdminProvisioner
     {
     }
 
-    public function provision(string $email, string $password, string $displayName): void
+    public function provision(string $username, string $password, string $displayName): void
     {
         $repository = new AuthRepository($this->pdo);
-        if ($repository->findUserByEmail(strtolower(trim($email))) !== null) {
+        $username = strtolower(Input::string(['username' => $username], 'username', 3, 64));
+        if (!preg_match('/^[a-z0-9][a-z0-9._-]{2,63}$/', $username)) {
+            throw new ApiException(422, 'VALIDATION_ERROR', 'El usuario administrativo no tiene un formato válido.', ['field' => 'username']);
+        }
+        $displayName = Input::string(['displayName' => $displayName], 'displayName', 1, 120);
+        try {
+            $passwordHash = PasswordHasher::hash($password);
+        } catch (\InvalidArgumentException $exception) {
+            throw new ApiException(422, 'VALIDATION_ERROR', $exception->getMessage(), ['field' => 'password']);
+        }
+        if ($repository->findUserByUsername($username) !== null) {
             throw new ApiException(409, 'CONFLICT', 'La cuenta indicada ya existe; la provisión no modifica cuentas existentes.');
         }
 
-        $auth = new AuthService(
-            $repository,
-            new ProfileRepository($this->pdo),
-            $this->config,
-            new UnavailablePasswordResetDelivery(),
-        );
-        $auth->register([
-            'email' => $email,
-            'password' => $password,
-            'displayName' => $displayName,
-            'timezone' => 'America/Tegucigalpa',
-            'locale' => 'es-HN',
-        ]);
-        $user = $repository->findUserByEmail(strtolower(trim($email)));
-        if (!is_array($user)) {
-            throw new \RuntimeException('No se pudo localizar la cuenta recién provisionada.');
-        }
-
-        TransactionRunner::run($this->pdo, function (PDO $pdo) use ($user): void {
+        $userId = Uuid::v4();
+        try {
+            TransactionRunner::run($this->pdo, function (PDO $pdo) use ($userId, $username, $passwordHash, $displayName): void {
             $now = (new SystemClock())->now();
             $timestamp = Dates::database($now);
-            $activate = $pdo->prepare(
-                'UPDATE users
-                 SET status = :status, email_verified_at = :verified_at, updated_at = :updated_at
-                 WHERE id = :id AND status = :pending'
+            $user = $pdo->prepare(
+                'INSERT INTO users (id, email, username, password_hash, status, created_at, updated_at)
+                 VALUES (:id, NULL, :username, :password_hash, :status, :created_at, :updated_at)'
             );
-            $activate->execute([
+            $user->execute([
+                ':id' => $userId,
+                ':username' => $username,
+                ':password_hash' => $passwordHash,
                 ':status' => 'active',
-                ':verified_at' => $timestamp,
+                ':created_at' => $timestamp,
                 ':updated_at' => $timestamp,
-                ':id' => (string) $user['id'],
             ]);
-            if ($activate->rowCount() !== 1) {
-                throw new \RuntimeException('La cuenta no está en un estado apto para la provisión administrativa.');
-            }
             $trial = $pdo->prepare(
-                'UPDATE user_profiles
-                 SET trial_started_at = :started_at, trial_ends_at = :ends_at, updated_at = :updated_at
-                 WHERE user_id = :user_id'
+                'INSERT INTO user_profiles
+                    (user_id, display_name, timezone, locale, opening_balance_hnl, onboarding_completed, trial_started_at, trial_ends_at, created_at, updated_at)
+                 VALUES (:user_id, :display_name, :timezone, :locale, 0.00, 0, :started_at, :ends_at, :created_at, :updated_at)'
             );
             $trial->execute([
+                ':user_id' => $userId,
+                ':display_name' => $displayName,
+                ':timezone' => 'America/Tegucigalpa',
+                ':locale' => 'es-HN',
                 ':started_at' => $timestamp,
                 ':ends_at' => Dates::database($now->modify('+7 days')),
+                ':created_at' => $timestamp,
                 ':updated_at' => $timestamp,
-                ':user_id' => (string) $user['id'],
             ]);
             $driver = (string) $pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
             $roleSql = $driver === 'sqlite'
@@ -85,20 +82,28 @@ final class AdminProvisioner
                 : 'INSERT IGNORE INTO user_roles (user_id, role_code, assigned_by_user_id, assigned_at)
                    VALUES (:user_id, :role_code, NULL, :assigned_at)';
             $role = $pdo->prepare($roleSql);
-            $role->execute([
-                ':user_id' => (string) $user['id'],
-                ':role_code' => 'admin',
-                ':assigned_at' => $timestamp,
-            ]);
+            foreach (['member', 'admin'] as $roleCode) {
+                $role->execute([
+                    ':user_id' => $userId,
+                    ':role_code' => $roleCode,
+                    ':assigned_at' => $timestamp,
+                ]);
+            }
             (new AuditLogger($pdo))->record(
                 null,
-                (string) $user['id'],
+                $userId,
                 'admin.provisioned',
                 'user',
-                (string) $user['id'],
+                $userId,
                 bin2hex(random_bytes(16)),
-                ['source' => 'cli'],
+                ['source' => 'cli', 'identity' => 'username'],
             );
-        });
+            });
+        } catch (PDOException $exception) {
+            if ((string) $exception->getCode() === '23000') {
+                throw new ApiException(409, 'CONFLICT', 'La cuenta indicada ya existe; la provisión no modifica cuentas existentes.');
+            }
+            throw $exception;
+        }
     }
 }

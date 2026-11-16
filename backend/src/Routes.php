@@ -181,6 +181,23 @@ final class Routes
             ]);
         };
 
+        $handlers['POST /api/v1/admin/auth/login'] = static function (Request $request) use ($config, $auth, $cookies): never {
+            if (!$config->loginEnabled()) {
+                throw new ApiException(503, 'AUTH_NOT_AVAILABLE', 'El inicio de sesión todavía no está habilitado.');
+            }
+            $result = $auth()->loginAdmin($request->json(), $request->clientIp, $request->userAgent);
+            $cookies->issue(
+                (string) $result['sessionToken'],
+                (string) $result['csrfToken'],
+                (int) $result['expiresAtUnix'],
+            );
+            JsonResponse::success([
+                'profile' => $result['profile'],
+                'session' => ['expiresAt' => $result['expiresAt']],
+                'csrfToken' => $result['csrfToken'],
+            ], $request->requestId);
+        };
+
         $handlers['POST /api/v1/movements'] = static function (
             Request $request,
             ?AuthenticatedUser $user,

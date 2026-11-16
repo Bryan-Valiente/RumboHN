@@ -21,8 +21,8 @@
         <p class="login-copy">Ingresá con una cuenta que tenga el rol administrativo. Las credenciales nunca se guardan en este navegador.</p>
         <form id="login-form" novalidate>
           <label>
-            Correo administrativo
-            <input id="login-email" name="email" type="email" autocomplete="username" required maxlength="254" />
+            Usuario administrativo
+            <input id="login-username" name="username" type="text" autocomplete="username" required minlength="3" maxlength="64" pattern="[a-zA-Z0-9][a-zA-Z0-9._-]{2,63}" />
           </label>
           <label>
             Contraseña

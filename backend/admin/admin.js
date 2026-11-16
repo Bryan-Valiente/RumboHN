@@ -5,7 +5,7 @@ const elements = {
   loginView: document.querySelector('#login-view'),
   adminView: document.querySelector('#admin-view'),
   loginForm: document.querySelector('#login-form'),
-  loginEmail: document.querySelector('#login-email'),
+  loginUsername: document.querySelector('#login-username'),
   loginPassword: document.querySelector('#login-password'),
   loginMessage: document.querySelector('#login-message'),
   appMessage: document.querySelector('#app-message'),
@@ -92,7 +92,7 @@ function showApp(profile, csrfToken) {
   state.profile = profile;
   state.csrfToken = csrfToken;
   elements.operatorName.textContent = profile.displayName;
-  elements.operatorEmail.textContent = profile.email;
+  elements.operatorEmail.textContent = profile.username ? '@' + profile.username : (profile.email || '');
   document.querySelector('.operator-avatar').textContent = initials(profile.displayName);
   elements.loginView.hidden = true;
   elements.adminView.hidden = false;
@@ -360,9 +360,9 @@ elements.loginForm.addEventListener('submit', async (event) => {
   event.preventDefault();
   elements.loginMessage.textContent = '';
   try {
-    const response = await request('auth/login', {
+    const response = await request('admin/auth/login', {
       method: 'POST',
-      body: { email: elements.loginEmail.value, password: elements.loginPassword.value },
+      body: { username: elements.loginUsername.value, password: elements.loginPassword.value },
     });
     if (!response.data.profile.roles || !response.data.profile.roles.includes('admin')) {
       state.csrfToken = response.data.csrfToken;

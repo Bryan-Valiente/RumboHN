@@ -82,7 +82,7 @@ final class SessionAuthenticator
 
         return new AuthenticatedUser(
             (string) $record['user_id'],
-            (string) $record['email'],
+            $record['email'] === null ? null : (string) $record['email'],
             (string) $record['session_id'],
             $roles,
             $credentialType,

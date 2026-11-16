@@ -6,6 +6,7 @@ return [
     ['GET', '/api/v1/health', 'public'],
     ['POST', '/api/v1/auth/register', 'public'],
     ['POST', '/api/v1/auth/login', 'public'],
+    ['POST', '/api/v1/admin/auth/login', 'public'],
     ['POST', '/api/v1/auth/logout', 'protected'],
     ['GET', '/api/v1/auth/session', 'protected'],
     ['POST', '/api/v1/auth/password/forgot', 'public'],

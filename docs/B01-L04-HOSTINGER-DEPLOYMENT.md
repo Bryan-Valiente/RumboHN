@@ -56,8 +56,8 @@ La migration 002 es aditiva, usa ADD COLUMN IF NOT EXISTS, añade un índice y r
 1. Construir el cliente desde esta rama con npm run build -- --base=/demos/rumbo-hn/. Esto no modifica src ni la rama de Owen; solo genera artefactos.
 2. Copiar dist, backend/admin, backend/deploy/hostinger/root/.htaccess y backend/deploy/hostinger/api/.htaccess al directorio demo.
 3. Copiar backend/src y backend/config al runtime privado equivalente a api/src y api/config. Copiar bin y migrations solamente al runtime privado.
-4. Cargar el entorno privado y ejecutar php bin/migrate.php desde el runtime. La salida esperada es que 002 se aplique una vez; no debe mostrar credenciales.
-5. Ejecutar provision-admin.php solo cuando el operador haya cargado sus credenciales en el mecanismo de secretos.
+4. Cargar el entorno privado y ejecutar `php bin/migrate.php` desde el runtime. La salida esperada es que cada versión pendiente se aplique una vez; no debe mostrar credenciales.
+5. Ejecutar `php bin/provision-admin.php` solo con un TTY seguro: usa `RUMBO_ADMIN_USERNAME` (por defecto `rumbohn2026`) y solicita la contraseña con eco desactivado cuando no exista un secreto temporal autorizado. No usar correo falso ni guardar la contraseña en archivos públicos.
 6. Confirmar HTTPS, cookie Secure, same-origin, GET /demos/rumbo-hn/api/v1/health y GET /demos/rumbo-hn/admin/.
 
 ## Smoke HTTP posterior
@@ -69,6 +69,7 @@ Sin datos reales ni payloads financieros:
 - Un POST de login con credenciales inválidas debe devolver un error genérico, no enumerar cuentas y no revelar conexión.
 - Una cuenta sin admin debe recibir 403 en /api/v1/admin/dashboard.
 - La cuenta provisionada debe poder iniciar sesión, recibir cookies Secure/HttpOnly/SameSite y cargar el panel.
+- El login administrativo debe usar `POST /demos/rumbo-hn/api/v1/admin/auth/login` con username; `POST /demos/rumbo-hn/api/v1/auth/login` conserva el contrato cliente por email.
 - El owner debe verificar dashboard, búsqueda de cuentas, monitoreo, auditoría y navegación móvil.
 
 La suite sintética local no prueba por sí sola el PHP hospedado. El estado deployed=PASS solo puede declararse después de observar esos HTTP checks y PDO directo desde el runtime real.

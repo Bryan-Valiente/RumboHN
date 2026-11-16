@@ -23,7 +23,7 @@ final class ProfileRepository
     public function get(string $userId): array
     {
         $statement = $this->pdo->prepare(
-            'SELECT u.id, u.email, u.status, u.email_verified_at,
+            'SELECT u.id, u.email, u.username, u.status, u.email_verified_at,
                     p.display_name, p.timezone, p.locale, p.opening_balance_hnl,
                     p.onboarding_completed, p.trial_started_at, p.trial_ends_at,
                     p.created_at, p.updated_at
@@ -45,7 +45,8 @@ final class ProfileRepository
 
         return [
             'id' => (string) $row['id'],
-            'email' => (string) $row['email'],
+            'email' => $row['email'] === null ? null : (string) $row['email'],
+            'username' => $row['username'] === null ? null : (string) $row['username'],
             'displayName' => (string) $row['display_name'],
             'timezone' => (string) $row['timezone'],
             'locale' => (string) $row['locale'],

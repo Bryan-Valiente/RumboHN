@@ -21,10 +21,29 @@ final class AuthRepository
     public function findUserByEmail(string $email): ?array
     {
         $statement = $this->pdo->prepare(
-            'SELECT id, email, password_hash, status, email_verified_at
+            'SELECT id, email, username, password_hash, status, email_verified_at
              FROM users WHERE email = :email LIMIT 1'
         );
         $statement->execute([':email' => $email]);
+        $user = $statement->fetch();
+        return is_array($user) ? $user : null;
+    }
+
+    /** @return array<string, mixed>|null */
+    public function findUserByUsername(string $username, bool $adminOnly = false): ?array
+    {
+        $sql = 'SELECT u.id, u.email, u.username, u.password_hash, u.status, u.email_verified_at
+                FROM users u';
+        if ($adminOnly) {
+            $sql .= ' INNER JOIN user_roles ur ON ur.user_id = u.id AND ur.role_code = :role_code';
+        }
+        $sql .= ' WHERE u.username = :username LIMIT 1';
+        $statement = $this->pdo->prepare($sql);
+        $parameters = [':username' => $username];
+        if ($adminOnly) {
+            $parameters[':role_code'] = 'admin';
+        }
+        $statement->execute($parameters);
         $user = $statement->fetch();
         return is_array($user) ? $user : null;
     }

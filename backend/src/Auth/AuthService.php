@@ -71,7 +71,53 @@ final class AuthService
         Input::assertAllowedKeys($data, ['email', 'password']);
         $rawEmail = Input::string($data, 'email', 1, 254);
         $password = Input::rawString($data, 'password', 1, 128);
-        $normalizedIdentity = strtolower(trim($rawEmail));
+        return $this->loginIdentity(
+            $rawEmail,
+            $password,
+            $clientIp,
+            $userAgent,
+            function (string $identity): ?array {
+                $email = filter_var($identity, FILTER_VALIDATE_EMAIL) !== false
+                    ? $identity
+                    : null;
+                return $email === null ? null : $this->repository->findUserByEmail($email);
+            },
+            'El correo o la contraseña no son válidos.',
+        );
+    }
+
+    /** @param array<string, mixed> $data @return array<string, mixed> */
+    public function loginAdmin(array $data, ?string $clientIp, ?string $userAgent): array
+    {
+        Input::assertAllowedKeys($data, ['username', 'password']);
+        $rawUsername = Input::string($data, 'username', 1, 64);
+        $password = Input::rawString($data, 'password', 1, 128);
+
+        return $this->loginIdentity(
+            $rawUsername,
+            $password,
+            $clientIp,
+            $userAgent,
+            function (string $identity): ?array {
+                if (!preg_match('/^[a-z0-9][a-z0-9._-]{2,63}$/', $identity)) {
+                    return null;
+                }
+                return $this->repository->findUserByUsername($identity, true);
+            },
+            'El usuario o la contraseña no son válidos.',
+        );
+    }
+
+    /** @param callable(string): (?array<string, mixed>) $finder @return array<string, mixed> */
+    private function loginIdentity(
+        string $rawIdentity,
+        string $password,
+        ?string $clientIp,
+        ?string $userAgent,
+        callable $finder,
+        string $invalidMessage,
+    ): array {
+        $normalizedIdentity = strtolower(trim($rawIdentity));
         $pepper = $this->config->securityPepper();
         $identityHash = Token::keyedHash($normalizedIdentity, $pepper);
         $ipHash = $clientIp === null || $clientIp === '' ? null : Token::keyedHash($clientIp, $pepper);
@@ -81,16 +127,13 @@ final class AuthService
             throw new ApiException(429, 'RATE_LIMITED', 'No se pudo iniciar sesión. Intentá nuevamente más tarde.');
         }
 
-        $email = filter_var($normalizedIdentity, FILTER_VALIDATE_EMAIL) !== false
-            ? $normalizedIdentity
-            : null;
-        $user = $email === null ? null : $this->repository->findUserByEmail($email);
+        $user = $finder($normalizedIdentity);
         $hash = is_array($user) ? (string) $user['password_hash'] : self::dummyPasswordHash();
         $verified = PasswordHasher::verify($password, $hash);
         $allowed = $verified && is_array($user) && (string) $user['status'] === 'active';
         if (!$allowed || !is_array($user)) {
             $this->repository->recordAttempt($identityHash, $ipHash, false, $now);
-            throw new ApiException(401, 'AUTH_INVALID', 'El correo o la contraseña no son válidos.');
+            throw new ApiException(401, 'AUTH_INVALID', $invalidMessage);
         }
 
         $sessionToken = Token::random();
@@ -116,7 +159,7 @@ final class AuthService
         );
         if (!$created) {
             $this->repository->recordAttempt($identityHash, $ipHash, false, $now);
-            throw new ApiException(401, 'AUTH_INVALID', 'El correo o la contraseña no son válidos.');
+            throw new ApiException(401, 'AUTH_INVALID', $invalidMessage);
         }
         $this->repository->recordAttempt($identityHash, $ipHash, true, $now);
 

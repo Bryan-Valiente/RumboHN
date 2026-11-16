@@ -49,7 +49,7 @@ final class AdminRepository
             $trialCounts = ['active_trials' => 0, 'expired_trials' => 0];
         }
         $recent = $this->pdo->query(
-            'SELECT u.id, u.email, u.status, u.created_at, u.last_login_at,
+            'SELECT u.id, u.email, u.username, u.status, u.created_at, u.last_login_at,
                     p.display_name, p.trial_started_at, p.trial_ends_at
              FROM users u INNER JOIN user_profiles p ON p.user_id = u.id
              ORDER BY u.created_at DESC LIMIT 8'
@@ -78,7 +78,7 @@ final class AdminRepository
         $where = 'WHERE 1 = 1';
         $parameters = [];
         if ($search !== null && trim($search) !== '') {
-            $where .= ' AND (u.email LIKE :search OR p.display_name LIKE :search)';
+            $where .= ' AND (u.email LIKE :search OR u.username LIKE :search OR p.display_name LIKE :search)';
             $parameters[':search'] = '%' . trim($search) . '%';
         }
         if ($status !== null && $status !== '') {
@@ -94,7 +94,7 @@ final class AdminRepository
         $count->execute($parameters);
         $total = (int) $count->fetchColumn();
 
-        $sql = 'SELECT u.id, u.email, u.status, u.email_verified_at, u.last_login_at, u.created_at, u.updated_at,
+        $sql = 'SELECT u.id, u.email, u.username, u.status, u.email_verified_at, u.last_login_at, u.created_at, u.updated_at,
                        p.display_name, p.timezone, p.locale, p.trial_started_at, p.trial_ends_at
                 FROM users u INNER JOIN user_profiles p ON p.user_id = u.id ' . $where . '
                 ORDER BY u.created_at DESC LIMIT ' . $limit . ' OFFSET ' . $offset;
@@ -274,7 +274,7 @@ final class AdminRepository
     private function findUser(string $userId, bool $lock = false): array
     {
         $statement = $this->pdo->prepare(
-            'SELECT u.id, u.email, u.status, u.email_verified_at, u.last_login_at, u.created_at, u.updated_at,
+            'SELECT u.id, u.email, u.username, u.status, u.email_verified_at, u.last_login_at, u.created_at, u.updated_at,
                     p.display_name, p.timezone, p.locale, p.trial_started_at, p.trial_ends_at
              FROM users u INNER JOIN user_profiles p ON p.user_id = u.id
              WHERE u.id = :id LIMIT 1' . ($lock ? $this->forUpdate() : '')
@@ -294,7 +294,8 @@ final class AdminRepository
         $roles->execute([':user_id' => (string) $row['id']]);
         $mapped = [
             'id' => (string) $row['id'],
-            'email' => (string) $row['email'],
+            'email' => $row['email'] === null ? null : (string) $row['email'],
+            'username' => $row['username'] === null ? null : (string) $row['username'],
             'displayName' => (string) $row['display_name'],
             'status' => (string) $row['status'],
             'roles' => array_map(static fn (array $role): string => (string) $role['role_code'], $roles->fetchAll()),

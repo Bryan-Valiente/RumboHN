@@ -58,10 +58,13 @@ Incluye:
 
 No existe un endpoint web para elevar roles. La provisión administrativa es solo CLI:
 
-1. El operador carga RUMBO_ADMIN_EMAIL, RUMBO_ADMIN_PASSWORD y opcionalmente RUMBO_ADMIN_DISPLAY_NAME mediante el mecanismo de secretos del servidor.
-2. Ejecuta php backend/bin/provision-admin.php desde el runtime privado, nunca desde public_html.
-3. El comando rechaza una cuenta existente, activa una cuenta nueva, inicia su trial de siete días, asigna admin y no imprime la contraseña.
-4. Se elimina el secreto temporal del mecanismo del operador después de la ejecución.
+1. El operador usa RUMBO_ADMIN_USERNAME (por defecto `rumbohn2026`) y opcionalmente RUMBO_ADMIN_DISPLAY_NAME; la contraseña se solicita mediante un prompt TTY enmascarado si no fue cargada por un mecanismo de secretos seguro.
+2. Ejecuta `php bin/provision-admin.php` desde el runtime privado, nunca desde public_html.
+3. La migration forward-only 003 permite un username único y nullable para cuentas controladas; las cuentas cliente siguen exigiendo correo y el login cliente continúa siendo exclusivamente por email.
+4. El comando rechaza una cuenta existente, activa una cuenta nueva sin correo falso, inicia su trial de siete días, asigna `member` + `admin` y no imprime la contraseña.
+5. Se elimina cualquier secreto temporal del mecanismo del operador después de la ejecución.
+
+El panel usa `POST /api/v1/admin/auth/login` con username. Las rutas financieras y el frontend de Owen no se modifican.
 
 La recuperación y el registro público permanecen cerrados mientras no exista un proveedor de correo verificado. Eso no bloquea el acceso controlado de una cuenta administradora provisionada por CLI.
 
