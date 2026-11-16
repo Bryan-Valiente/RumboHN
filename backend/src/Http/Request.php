@@ -22,11 +22,15 @@ final class Request
     ) {
     }
 
-    public static function fromGlobals(): self
+    public static function fromGlobals(?string $basePath = null): self
     {
         $method = strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'));
         $uri = (string) ($_SERVER['REQUEST_URI'] ?? '/');
-        $path = parse_url($uri, PHP_URL_PATH) ?: '/';
+        $path = self::normalizePath(parse_url($uri, PHP_URL_PATH) ?: '/');
+        $basePath = self::normalizeBasePath($basePath);
+        if ($basePath !== '' && ($path === $basePath || str_starts_with($path, $basePath . '/'))) {
+            $path = substr($path, strlen($basePath)) ?: '/';
+        }
         $headers = [];
 
         foreach ($_SERVER as $name => $value) {
@@ -131,5 +135,17 @@ final class Request
     {
         $path = '/' . ltrim($path, '/');
         return $path === '/' ? $path : rtrim($path, '/');
+    }
+
+    private static function normalizeBasePath(?string $basePath): string
+    {
+        if ($basePath === null || trim($basePath) === '' || trim($basePath) === '/') {
+            return '';
+        }
+        $normalized = self::normalizePath(trim($basePath));
+        if (!preg_match('#^(?:/[A-Za-z0-9._-]+)+$#', $normalized)) {
+            throw new \InvalidArgumentException('La ruta base no es válida.');
+        }
+        return $normalized;
     }
 }

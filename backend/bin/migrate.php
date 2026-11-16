@@ -41,13 +41,32 @@ if ($lock !== 1) {
 }
 
 try {
+    $applied = [];
+    try {
+        $records = $pdo->query('SELECT version FROM schema_migrations')->fetchAll();
+        foreach ($records as $record) {
+            $applied[(string) $record['version']] = true;
+        }
+    } catch (Throwable) {
+        // Migration 001 is responsible for creating the tracking table.
+    }
+
     foreach ($files as $file) {
+        if (!preg_match('/^([0-9]+)_/', basename($file), $matches)) {
+            throw new RuntimeException('El archivo de migración no contiene una versión numérica.');
+        }
+        $version = $matches[1];
+        if (isset($applied[$version])) {
+            printf("%s: omitida (ya aplicada)\n", basename($file));
+            continue;
+        }
         $sql = file_get_contents($file);
         if ($sql === false) {
             throw new RuntimeException('No se pudo leer la migración.');
         }
         $count = SqlMigrationRunner::apply($pdo, $sql);
         printf("%s: %d sentencias aplicadas\n", basename($file), $count);
+        $applied[$version] = true;
     }
 } finally {
     $pdo->query("SELECT RELEASE_LOCK('rumbo_hn_schema_migration')");

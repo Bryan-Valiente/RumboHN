@@ -18,6 +18,7 @@ $request = Request::fromGlobals();
 
 try {
     $config = new Config();
+    $request = Request::fromGlobals($config->basePath());
     OriginGuard::assertAllowed($request, $config);
     $database = new Database($config);
     $router = new Router(new SessionAuthenticator($database, $config), new CsrfGuard($config));

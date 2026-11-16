@@ -116,6 +116,18 @@ final class Config
         return $this->boolean('RUMBO_PASSWORD_RECOVERY_ENABLED', false);
     }
 
+    public function basePath(): string
+    {
+        $basePath = $this->get('RUMBO_BASE_PATH', '');
+        if ($basePath === null || $basePath === '' || $basePath === '/') {
+            return '';
+        }
+        if (!preg_match('#^(?:/[A-Za-z0-9._-]+)+$#', $basePath)) {
+            throw new RuntimeException('RUMBO_BASE_PATH no es una ruta web válida.');
+        }
+        return $basePath;
+    }
+
     public function sessionCookieName(): string
     {
         return 'rumbo_session';

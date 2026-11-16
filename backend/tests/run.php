@@ -170,9 +170,9 @@ $test('Migración 001 sigue aditiva, HNL decimal e InnoDB', static function () u
     $assert($engines === $tables, 'No todas las tablas usan InnoDB.');
 });
 
-$test('Catálogo implementa auth, movimientos y resumen sin abrir finanzas', static function () use ($backendRoot, $assert, $assertSame): void {
+$test('Catálogo mantiene auth y finanzas protegidas, incluida la superficie admin', static function () use ($backendRoot, $assert, $assertSame): void {
     $routes = require $backendRoot . '/config/routes.php';
-    $assertSame(30, count($routes));
+    $assertSame(43, count($routes));
     $indexed = [];
     foreach ($routes as $route) {
         $indexed[$route[0] . ' ' . $route[1]] = $route[2];
@@ -181,7 +181,9 @@ $test('Catálogo implementa auth, movimientos y resumen sin abrir finanzas', sta
     $assertSame('public', $indexed['POST /api/v1/auth/register']);
     $assertSame('protected', $indexed['GET /api/v1/movements']);
     $assertSame('protected', $indexed['GET /api/v1/financial-summary']);
-    $assert(!in_array('admin', array_column($routes, 2), true), 'No debe existir un endpoint administrativo público todavía.');
+    $assertSame('protected', $indexed['POST /api/v1/reminders/{reminderId}/payments']);
+    $assertSame('admin', $indexed['GET /api/v1/admin/dashboard']);
+    $assert(in_array('admin', array_column($routes, 2), true), 'Falta el acceso administrativo separado.');
 });
 
 $test('Router reconoce parámetros opacos sin consultar la base', static function () use ($assertSame): void {
