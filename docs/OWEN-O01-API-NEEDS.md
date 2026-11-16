@@ -1,6 +1,6 @@
 # O01 — necesidades del cliente para el contrato con Bryan
 
-Estado: propuesta para B01, no contrato aprobado ni API implementada. Basada en el cliente de `main` `a28aa29`.
+Estado: propuesta para B01, no contrato aprobado ni API implementada. Basada en el cliente de `main` `a28aa29`. `src/client/apiTransport.ts` prepara transporte del mismo origen sin fijar rutas ni interpretar modelos financieros; todavía no está conectado a `App.tsx`.
 
 ## Decisiones que B01 y O01 deben cerrar primero
 
