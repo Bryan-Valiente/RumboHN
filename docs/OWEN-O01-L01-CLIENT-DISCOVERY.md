@@ -1,6 +1,6 @@
 # O01-L01 — descubrimiento de la aplicación cliente
 
-Estado: inventario verificado sobre `main` `a28aa290cf2b5c7064a72bae7f27d931e636e6a9`. Rama de trabajo: `block/owen-o01`. No se ha conectado una API.
+Estado: inventario verificado sobre `main` `a28aa290cf2b5c7064a72bae7f27d931e636e6a9`. Rama de trabajo: `block/owen-o01`. No se ha conectado una API. Actualización de contrato: B01 `6456195` establece importes API en lempiras HNL con dos decimales; prevalece sobre cualquier propuesta anterior de transportar centavos enteros.
 
 ## Base y límites
 
@@ -15,7 +15,7 @@ Owen se encarga de `src/App.tsx`, `src/PersonalReminderModal.tsx`, los estilos d
 | Landing y navegación | Presentación pública, escenas ficticias, menú móvil y recorrido guiado. | Distinguir ejemplos públicos de cuentas reales. |
 | Acceso y onboarding | Creación de espacio con contraseña local, desbloqueo y migración de formato local. | Registro, sesión, recuperación y estados de acceso definidos por Bryan. |
 | Panel y día | Saldo, actividad, compromisos pendientes, acciones rápidas y revisión diaria. | Resumen y movimientos persistentes, fechas y estados de carga/error. |
-| Movimientos | Alta, edición, baja, filtros, gastos rápidos y plantillas. | CRUD, orden, paginación, importes en centavos e idempotencia. |
+| Movimientos | Alta, edición, baja, filtros, gastos rápidos y plantillas. | CRUD, orden, paginación, importes HNL de dos decimales e idempotencia. |
 | Presupuestos | Límites y gasto derivado de movimientos. | CRUD por periodo/categoría y totales consistentes. |
 | Metas | Creación, aportes y proyección de frecuencia. | Metas y aportes persistentes con operaciones atómicas. |
 | Recordatorios | Alta, edición, baja, recurrencia, pago y reversión. | Contrato explícito para pago, generación de próxima cuota y reversión. |
@@ -27,7 +27,7 @@ Owen se encarga de `src/App.tsx`, `src/PersonalReminderModal.tsx`, los estilos d
 
 `src/App.tsx` inicia desde `inspectWorkspaceStorage()`, conserva `PersistedWorkspace` en estado React y guarda cada cambio mediante `saveEncryptedWorkspace()` (`src/persistence.ts`). `WORKSPACE_STORAGE_KEY` contiene un sobre AES-GCM derivado de contraseña local; no equivale a una cuenta o sesión de servidor. El desbloqueo, la migración legado, el respaldo, el plazo de prueba y la suscripción simulada dependen de este formato. Al conectar la API, conservar el modo local y sus datos hasta que exista un flujo de importación con consentimiento, confirmación del servidor y recuperación ante fallo. No borrar el sobre local durante una transición incompleta.
 
-El estado financiero usa importes `number` en lempiras e IDs numéricos creados en el cliente. El contrato de producto propone centavos enteros; el adaptador deberá convertir explícitamente y verificar límites. Las fechas de movimientos y vencimientos son cadenas locales `YYYY-MM-DD`; las marcas de creación son UTC. Los filtros, reportes y sugerencias hoy se calculan en el navegador.
+El estado financiero usa importes `number` en lempiras e IDs numéricos creados en el cliente. El contrato B01 conserva HNL en lempiras con dos decimales en el API; el adaptador validará la precisión sin reinterpretar el JSON local como centavos. Las fechas de movimientos y vencimientos son cadenas locales `YYYY-MM-DD`; las marcas de creación son UTC. Los filtros, reportes y sugerencias hoy se calculan en el navegador.
 
 ## Hallazgos y prioridades
 
@@ -44,7 +44,7 @@ El estado financiero usa importes `number` en lempiras e IDs numéricos creados 
 | Loop | Entrega | Criterio de aceptación |
 |---|---|---|
 | O01-L01 | Este inventario y las necesidades de API de `OWEN-O01-API-NEEDS.md`. | Base verificada, dependencias y discrepancias documentadas; sin alterar el cliente. |
-| O01-L02 | Contrato acordado con B01 y tipos/adaptadores de transporte aislados del UI. | Ejemplos de respuesta y error aprobados por Bryan; pruebas de conversión de importes, fechas e IDs; modo local conserva sus datos. |
+| O01-L02 | Contrato B01 autorizado y adaptadores de transporte aislados del UI. | Rutas y envelopes documentados; validación HNL de dos decimales y de IDs; modo local conserva sus datos. Los campos específicos pendientes se cierran con Bryan antes de conectar pantallas. |
 | O01-L03 | Lecturas de sesión, perfil, movimientos y resumen mediante el adaptador, con respuestas simuladas hasta que exista API. | Estados vacío/carga/error/sesión vencida comprobados; cambio entre modo local y API explícito; ninguna cuenta ficticia presentada como real. |
 | O01-L04 | Mutaciones de movimientos y primer recorrido de integración con B02. | Altas, ediciones, bajas y reintentos no duplican registros; pruebas con dos usuarios y API real en entorno aislado antes de declarar integración completa. |
 
