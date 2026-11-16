@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#173447" />
+    <meta name="color-scheme" content="light" />
+    <meta name="robots" content="noindex,nofollow" />
+    <title>Rumbo HN · Administración</title>
+    <link rel="stylesheet" href="./admin.css" />
+  </head>
+  <body>
+    <main class="login-shell" id="login-view">
+      <section class="login-panel" aria-labelledby="admin-login-title">
+        <a class="brand" href="../" aria-label="Ir a Rumbo HN">
+          <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span>rumbo</span><sup>HN</sup>
+        </a>
+        <p class="eyebrow">Espacio de operación</p>
+        <h1 id="admin-login-title">Administración con acceso protegido.</h1>
+        <p class="login-copy">Ingresá con una cuenta que tenga el rol administrativo. Las credenciales nunca se guardan en este navegador.</p>
+        <form id="login-form" novalidate>
+          <label>
+            Correo administrativo
+            <input id="login-email" name="email" type="email" autocomplete="username" required maxlength="254" />
+          </label>
+          <label>
+            Contraseña
+            <input id="login-password" name="password" type="password" autocomplete="current-password" required minlength="12" maxlength="128" />
+          </label>
+          <p class="form-message" id="login-message" role="status" aria-live="polite"></p>
+          <button class="button button-primary" type="submit">Entrar al panel <span aria-hidden="true">→</span></button>
+        </form>
+        <p class="security-note"><span aria-hidden="true">◆</span> Sesión segura, cookies HttpOnly y verificación CSRF.</p>
+      </section>
+      <aside class="login-aside" aria-hidden="true">
+        <div class="aside-route"><span></span><i></i><i></i><i></i><b></b></div>
+        <div class="aside-copy">
+          <p>RUMBO / ADMIN</p>
+          <strong>Visibilidad clara,<br />controles medidos.</strong>
+          <small>Solo datos operativos. Sin contraseñas, tokens ni información financiera sensible.</small>
+        </div>
+      </aside>
+    </main>
+
+    <div class="admin-shell" id="admin-view" hidden>
+      <aside class="sidebar" aria-label="Navegación de administración">
+        <div class="sidebar-brand">
+          <a class="brand brand-light" href="../" aria-label="Ir a Rumbo HN">
+            <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span>rumbo</span><sup>HN</sup>
+          </a>
+          <span class="admin-tag">ADMIN</span>
+        </div>
+        <div class="operator" id="operator-summary">
+          <span class="operator-avatar" aria-hidden="true">R</span>
+          <div><strong id="operator-name">Operador</strong><small id="operator-email"></small></div>
+        </div>
+        <nav class="side-nav">
+          <button class="side-link active" type="button" data-section="overview"><span aria-hidden="true">01</span> Vista general</button>
+          <button class="side-link" type="button" data-section="users"><span aria-hidden="true">02</span> Cuentas</button>
+          <button class="side-link" type="button" data-section="monitoring"><span aria-hidden="true">03</span> Monitoreo</button>
+          <button class="side-link" type="button" data-section="audit"><span aria-hidden="true">04</span> Auditoría</button>
+        </nav>
+        <div class="sidebar-bottom">
+          <button class="side-link logout-link" type="button" id="logout-button"><span aria-hidden="true">↗</span> Cerrar sesión</button>
+          <p>RUMBO HN<br /><span id="footer-time"></span></p>
+        </div>
+      </aside>
+
+      <section class="workspace">
+        <header class="workspace-header">
+          <div>
+            <p class="breadcrumb">OPERACIÓN / <span id="section-label">VISTA GENERAL</span></p>
+            <h1 id="page-title">Pulso operativo</h1>
+          </div>
+          <div class="header-actions">
+            <span class="connection-state" id="connection-state"><i></i> Verificando</span>
+            <button class="icon-button" type="button" id="refresh-button" aria-label="Actualizar datos">↻</button>
+          </div>
+        </header>
+
+        <p class="app-message" id="app-message" role="status" aria-live="polite"></p>
+
+        <section class="section active" id="section-overview" aria-labelledby="page-title">
+          <div class="metrics-grid" id="metrics-grid" aria-live="polite"></div>
+          <div class="dashboard-grid">
+            <article class="data-panel registration-panel">
+              <div class="panel-head">
+                <div><p class="mini-label">Actividad reciente</p><h2>Nuevas cuentas</h2></div>
+                <button class="text-button" type="button" data-go-section="users">Ver cuentas →</button>
+              </div>
+              <div class="registration-list" id="recent-registrations"></div>
+            </article>
+            <article class="system-panel">
+              <p class="mini-label">Estado del sistema</p>
+              <h2>Servicios del demo</h2>
+              <div class="system-list" id="overview-system"></div>
+              <button class="text-button system-more" type="button" data-go-section="monitoring">Abrir monitoreo →</button>
+            </article>
+          </div>
+        </section>
+
+        <section class="section" id="section-users" aria-labelledby="users-heading" hidden>
+          <div class="section-intro">
+            <div><p class="mini-label">Acceso y ciclo de vida</p><h2 id="users-heading">Cuentas personales</h2></div>
+            <p>Las acciones cambian el estado de la cuenta y quedan registradas. Los roles no se administran desde esta pantalla.</p>
+          </div>
+          <form class="filters" id="user-filters">
+            <label class="search-field"><span aria-hidden="true">⌕</span><input id="user-search" type="search" placeholder="Buscar correo o nombre" autocomplete="off" /></label>
+            <label class="filter-select">Estado
+              <select id="user-status">
+                <option value="">Todos</option>
+                <option value="active">Activas</option>
+                <option value="pending">Pendientes</option>
+                <option value="locked">Bloqueadas</option>
+                <option value="disabled">Suspendidas</option>
+              </select>
+            </label>
+            <button class="button button-outline compact" type="submit">Aplicar</button>
+          </form>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Cuenta</th><th>Estado</th><th>Trial</th><th>Último acceso</th><th><span class="sr-only">Acciones</span></th></tr></thead>
+              <tbody id="users-table"></tbody>
+            </table>
+          </div>
+          <div class="table-empty" id="users-empty" hidden>No hay cuentas para estos filtros.</div>
+          <div class="pagination"><span id="user-count"></span><button class="text-button" type="button" id="load-more-users" hidden>Mostrar más →</button></div>
+        </section>
+
+        <section class="section" id="section-monitoring" aria-labelledby="monitoring-heading" hidden>
+          <div class="section-intro">
+            <div><p class="mini-label">Salud y seguridad</p><h2 id="monitoring-heading">Monitoreo del demo</h2></div>
+            <p>La lectura se limita a estados operativos; no expone credenciales, direcciones internas ni cargas financieras.</p>
+          </div>
+          <div class="monitoring-grid">
+            <article class="data-panel"><div class="panel-head"><div><p class="mini-label">Infraestructura</p><h3>Conexión</h3></div></div><div class="system-list large" id="system-status"></div></article>
+            <article class="data-panel"><div class="panel-head"><div><p class="mini-label">Acceso</p><h3>Eventos de autenticación</h3></div></div><div class="event-list" id="auth-events"></div></article>
+          </div>
+        </section>
+
+        <section class="section" id="section-audit" aria-labelledby="audit-heading" hidden>
+          <div class="section-intro">
+            <div><p class="mini-label">Trazabilidad</p><h2 id="audit-heading">Bitácora administrativa</h2></div>
+            <p>Se muestran solamente operaciones administrativas y sus identificadores de solicitud.</p>
+          </div>
+          <div class="data-panel"><div class="audit-list" id="audit-list"></div></div>
+        </section>
+      </section>
+    </div>
+
+    <script type="module" src="./admin.js"></script>
+  </body>
+</html>
