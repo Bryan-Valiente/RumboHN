@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
-import { ArrowDownLeft, ArrowUpRight, LogOut, Plus, RefreshCw, Trash2 } from 'lucide-react'
+import { ArrowDownLeft, ArrowUpRight, Eye, EyeOff, LogOut, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { clientRequestError } from './apiState'
 import { createRumboApi, normalizeHnl, RumboApiError, type HnlMovementWrite, type ServerMovement, type ServerProfile, type ServerSummary } from './rumboApi'
 
@@ -18,6 +18,7 @@ export default function ConnectedApp() {
   const [cursor, setCursor] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [passwordVisible, setPasswordVisible] = useState(false)
   const [editing, setEditing] = useState<ServerMovement | null>(null)
   const pendingCreate = useRef<{ fingerprint: string; key: string } | null>(null)
 
@@ -34,7 +35,7 @@ export default function ConnectedApp() {
   const handleError = (cause: unknown) => {
     const state = clientRequestError(cause)
     setError('message' in state ? state.message : 'No pudimos completar la solicitud.')
-    if (state.kind === 'unauthorized') { setView('login'); setProfile(null); setSummary(null); setMovements([]) }
+    if (state.kind === 'unauthorized') { setPasswordVisible(false); setView('login'); setProfile(null); setSummary(null); setMovements([]) }
     else if (view === 'checking') setView('unavailable')
   }
 
@@ -60,7 +61,7 @@ export default function ConnectedApp() {
 
   const logout = async () => {
     setBusy(true)
-    try { await api.logout(); setView('login'); setProfile(null); setSummary(null); setMovements([]); setCursor(null); setError('') }
+    try { await api.logout(); setPasswordVisible(false); setView('login'); setProfile(null); setSummary(null); setMovements([]); setCursor(null); setError('') }
     catch (cause) { handleError(cause) }
     finally { setBusy(false) }
   }
@@ -116,7 +117,7 @@ export default function ConnectedApp() {
     <main className="connected-main">
       {view === 'checking' && <section className="connected-panel" role="status">Comprobando tu sesión…</section>}
       {view === 'unavailable' && <section className="connected-panel"><h1>No pudimos conectar</h1><p>{error}</p><button className="connected-button" onClick={() => window.location.reload()}><RefreshCw size={17} /> Reintentar</button></section>}
-      {view === 'login' && <section className="connected-panel connected-login"><span className="connected-eyebrow">ACCESO A CUENTA REAL</span><h1>Entrá a tu espacio</h1><p>Usá una cuenta que ya esté activa. Los datos locales de otro navegador no se importan automáticamente.</p><form onSubmit={login}><label>Correo electrónico<input name="email" type="email" autoComplete="username" required /></label><label>Contraseña<input name="password" type="password" autoComplete="current-password" required /></label>{error && <p className="connected-error" role="alert">{error}</p>}<button className="connected-button" type="submit" disabled={busy}>{busy ? 'Ingresando…' : 'Iniciar sesión'}</button></form></section>}
+      {view === 'login' && <section className="connected-panel connected-login"><span className="connected-eyebrow">ACCESO A CUENTA REAL</span><h1>Entrá a tu espacio</h1><p>Usá una cuenta que ya esté activa. Los datos locales de otro navegador no se importan automáticamente.</p><form onSubmit={login}><label>Correo electrónico<input name="email" type="email" autoComplete="username" required /></label><div className="connected-password-field"><label htmlFor="connected-password">Contraseña</label><span className="connected-password"><input id="connected-password" name="password" type={passwordVisible ? 'text' : 'password'} autoComplete="current-password" required /><button type="button" className="connected-password-toggle" aria-label={passwordVisible ? 'Ocultar contraseña' : 'Mostrar contraseña'} aria-pressed={passwordVisible} onClick={() => setPasswordVisible((visible) => !visible)}>{passwordVisible ? <EyeOff size={19} aria-hidden="true" /> : <Eye size={19} aria-hidden="true" />}</button></span></div>{error && <p className="connected-error" role="alert">{error}</p>}<button className="connected-button" type="submit" disabled={busy}>{busy ? 'Ingresando…' : 'Iniciar sesión'}</button></form></section>}
       {view === 'ready' && <>
         <div className="connected-heading"><div><span className="connected-eyebrow">TU DINERO EN HNL</span><h1>Hola, {profile?.displayName}</h1><p>Tu resumen viene de tu cuenta en el servidor.</p></div><button className="connected-quiet" onClick={() => void load().catch(handleError)} disabled={busy}><RefreshCw size={17} /> Actualizar</button></div>
         {error && <p className="connected-error" role="alert">{error}</p>}
