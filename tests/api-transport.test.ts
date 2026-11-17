@@ -57,4 +57,15 @@ describe('client API transport', () => {
     await expect(transport.request('/future/movements', { method: 'POST', body: { amount: 100 } })).rejects.toMatchObject({ failure: 'network', status: null, response: null })
     expect(fetcher).toHaveBeenCalledOnce()
   })
+
+  it('applies the Hostinger base path and CSRF header after session discovery', async () => {
+    const fetcher = vi.fn(async () => new Response(JSON.stringify({ data: {}, meta: { requestId: 'r1' } }), { status: 200 }))
+    const transport = createApiTransport(fetcher as typeof fetch, '/demos/rumbo-hn/')
+    await transport.request('/api/v1/auth/session')
+    transport.setCsrfToken?.('csrf-value')
+    await transport.request('/api/v1/movements', { method: 'POST', body: { amount: '1.00' } })
+    expect(fetcher.mock.calls[0][0]).toBe('/demos/rumbo-hn/api/v1/auth/session')
+    expect(fetcher.mock.calls[1][0]).toBe('/demos/rumbo-hn/api/v1/movements')
+    expect(new Headers((fetcher.mock.calls[1][1] as RequestInit).headers).get('X-CSRF-Token')).toBe('csrf-value')
+  })
 })

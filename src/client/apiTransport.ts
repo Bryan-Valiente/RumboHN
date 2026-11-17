@@ -20,12 +20,20 @@ export class ApiTransportError extends Error {
   }
 }
 
-export type ApiTransport = { request(path: string, options?: ApiRequest): Promise<unknown> }
+export type ApiTransport = {
+  request(path: string, options?: ApiRequest): Promise<unknown>
+  setCsrfToken?(token: string | null): void
+}
 
 // The route map and response validators belong to the shared B01/O01 contract.
 // Keeping this boundary unused preserves the existing encrypted local workspace.
-export function createApiTransport(fetchImpl: typeof fetch = globalThis.fetch): ApiTransport {
+export function createApiTransport(fetchImpl: typeof fetch = globalThis.fetch, basePath = '/'): ApiTransport {
+  if (!basePath.startsWith('/') || !basePath.endsWith('/') || basePath.startsWith('//') || basePath.includes('..')) {
+    throw new TypeError('La base del API debe ser una ruta local terminada en /.')
+  }
+  let csrfToken: string | null = null
   return {
+    setCsrfToken(token) { csrfToken = token },
     async request(path, options = {}) {
       if (!path.startsWith('/') || path.startsWith('//') || path.includes('\\') || path.includes('#')) {
         throw new TypeError('La ruta del API debe ser relativa al mismo origen.')
@@ -35,10 +43,11 @@ export function createApiTransport(fetchImpl: typeof fetch = globalThis.fetch): 
       headers.set('Accept', 'application/json')
       const hasBody = Object.prototype.hasOwnProperty.call(options, 'body')
       if (hasBody) headers.set('Content-Type', 'application/json')
+      if ((options.method || 'GET') !== 'GET' && csrfToken) headers.set('X-CSRF-Token', csrfToken)
 
       let result: Response
       try {
-        result = await fetchImpl(path, {
+        result = await fetchImpl(basePath === '/' ? path : basePath.slice(0, -1) + path, {
           method: options.method || 'GET',
           credentials: 'same-origin',
           headers,
