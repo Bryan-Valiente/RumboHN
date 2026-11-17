@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { ArrowDownLeft, ArrowUpRight, LogOut, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { clientRequestError } from './apiState'
-import { createRumboApi, normalizeHnl, type HnlMovementWrite, type ServerMovement, type ServerProfile, type ServerSummary } from './rumboApi'
+import { createRumboApi, normalizeHnl, RumboApiError, type HnlMovementWrite, type ServerMovement, type ServerProfile, type ServerSummary } from './rumboApi'
 
 const api = createRumboApi()
 const dateToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Tegucigalpa', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
@@ -54,7 +54,7 @@ export default function ConnectedApp() {
     const values = new FormData(event.currentTarget)
     setBusy(true); setError('')
     try { await api.login(String(values.get('email') || ''), String(values.get('password') || '')); await load() }
-    catch (cause) { handleError(cause) }
+    catch (cause) { if (cause instanceof RumboApiError && cause.code === 'AUTH_INVALID') setError(cause.message); else handleError(cause) }
     finally { setBusy(false) }
   }
 
