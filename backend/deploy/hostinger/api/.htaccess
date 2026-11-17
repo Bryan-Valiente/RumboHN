@@ -1,0 +1,15 @@
+Options -Indexes
+RewriteEngine On
+
+<FilesMatch "\.(?:env|sql|bak|backup|log|ini|sh)$">
+    Require all denied
+</FilesMatch>
+
+<FilesMatch "\.php$">
+    Require all denied
+</FilesMatch>
+<Files "index.php">
+    Require all granted
+</Files>
+
+RewriteRule ^ index.php [L,QSA]

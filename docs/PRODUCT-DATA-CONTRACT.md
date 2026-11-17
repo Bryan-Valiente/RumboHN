@@ -9,17 +9,17 @@ Cada cuenta es dueña de sus movimientos manuales, presupuestos, metas, aportes 
 | Entidad | Campos principales | Regla de propiedad |
 |---|---|---|
 | Perfil | ID de usuario, zona horaria, preferencias | Solo el titular puede leer o cambiar su perfil. |
-| Movimiento | ID, usuario, tipo, nombre, categoría, importe en centavos, fecha, estado confirmado o planificado | Solo el titular puede crear, leer, editar o borrar. |
-| Presupuesto | ID, usuario, categoría, límite en centavos, periodo | Solo el titular; categoría y periodo deben ser únicos por usuario. |
-| Meta | ID, usuario, nombre, objetivo en centavos, fecha límite, frecuencia | Solo el titular; objetivo positivo. |
-| Aporte | ID, usuario, meta, importe en centavos, fecha, clave de operación | Solo el titular; la meta debe pertenecer al mismo usuario. |
+| Movimiento | ID, usuario, tipo, nombre, categoría, importe HNL con dos decimales, fecha, estado confirmado o planificado | Solo el titular puede crear, leer, editar o borrar. |
+| Presupuesto | ID, usuario, categoría, límite HNL con dos decimales, periodo | Solo el titular; categoría y periodo deben ser únicos por usuario. |
+| Meta | ID, usuario, nombre, objetivo HNL con dos decimales, fecha límite, frecuencia | Solo el titular; objetivo positivo. |
+| Aporte | ID, usuario, meta, importe HNL con dos decimales, fecha, clave de operación | Solo el titular; la meta debe pertenecer al mismo usuario. |
 | Recordatorio | ID, usuario, nombre, vencimiento, recurrencia, estado, importe esperado | Solo el titular; marcar pagado no crea un movimiento automáticamente. |
 
 ## Reglas financieras
 
 1. El saldo total se calcula con saldo inicial + ingresos confirmados − gastos confirmados. Los movimientos planificados no lo afectan.
 2. El dinero disponible para gastar es el saldo total menos los aportes separados para metas. Un aporte no se registra también como gasto.
-3. Los importes persistidos son enteros en centavos de lempira; no se aceptan `NaN`, infinitos ni importes negativos donde el tipo de operación ya representa el signo.
+3. Los importes persistidos usan `DECIMAL(15,2)` en lempiras hondureños. El API los representa como cadenas decimales de dos posiciones, por ejemplo `"15000.00"`; no se aceptan `NaN`, infinitos, notación científica ni importes negativos donde el tipo de operación ya representa el signo.
 4. Las altas y ediciones se validan en el servidor, además de la interfaz. Los IDs de usuario se derivan de la sesión autenticada, no de un campo enviado por el cliente.
 5. Un reintento de la misma operación no duplica un movimiento o aporte. Las actualizaciones que afecten dos entidades se aplican de forma atómica.
 6. Los presupuestos y los informes se derivan de movimientos confirmados del periodo y la zona horaria del usuario.
@@ -35,3 +35,5 @@ Cada cuenta es dueña de sus movimientos manuales, presupuestos, metas, aportes 
 - Se prueba una restauración de respaldo antes de aceptar usuarios reales.
 
 El esquema y los controles de acceso se implementarán para MySQL en Hostinger Business o Cloud, tras identificar la cuenta administradora y el ambiente de desarrollo. La API impondrá la propiedad en cada operación y el servidor obtendrá el ID del usuario de la sesión. Ningún dato ficticio actual se migrará como si perteneciera a una persona real.
+
+HNL es la moneda autoritativa. Una conversión a USD, si se añade más adelante con una fuente y fecha verificadas, será únicamente informativa y no modificará saldos almacenados.
