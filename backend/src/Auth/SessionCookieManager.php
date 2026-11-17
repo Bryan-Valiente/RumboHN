@@ -21,16 +21,17 @@ final class SessionCookieManager
     public function clear(): void
     {
         $expired = time() - 3600;
+        $apiPath = $this->apiCookiePath();
         setcookie($this->config->sessionCookieName(), '', [
             'expires' => $expired,
-            'path' => '/api/v1',
+            'path' => $apiPath,
             'secure' => $this->config->cookieSecure(),
             'httponly' => true,
             'samesite' => 'Strict',
         ]);
         setcookie($this->config->csrfCookieName(), '', [
             'expires' => $expired,
-            'path' => '/',
+            'path' => $apiPath,
             'secure' => $this->config->cookieSecure(),
             'httponly' => false,
             'samesite' => 'Strict',
@@ -42,7 +43,7 @@ final class SessionCookieManager
     {
         return [
             'expires' => $expiresAt,
-            'path' => '/api/v1',
+            'path' => $this->apiCookiePath(),
             'secure' => $this->config->cookieSecure(),
             'httponly' => true,
             'samesite' => 'Strict',
@@ -54,10 +55,15 @@ final class SessionCookieManager
     {
         return [
             'expires' => $expiresAt,
-            'path' => '/',
+            'path' => $this->apiCookiePath(),
             'secure' => $this->config->cookieSecure(),
             'httponly' => false,
             'samesite' => 'Strict',
         ];
+    }
+
+    private function apiCookiePath(): string
+    {
+        return $this->config->basePath() . '/api/v1';
     }
 }
