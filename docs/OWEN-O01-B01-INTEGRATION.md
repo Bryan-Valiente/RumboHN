@@ -8,13 +8,13 @@ La primera vista conectada usa sesión y login por correo, perfil, resumen finan
 
 El modo conectado es un recorrido inicial de O01, no un reemplazo de todas las pantallas locales. Presupuestos, metas, recordatorios, notificaciones y reportes todavía necesitan su integración de interfaz, pruebas de estados y validación contra cuentas aisladas. Registro y recuperación requieren las compuertas y el transporte de correo de B01; no se presentan como disponibles.
 
-## Bloqueo de integración en B01
+## Estado de la cookie en B01
 
-`backend/src/Auth/SessionCookieManager.php` fija la ruta de la cookie de sesión en `/api/v1`, mientras el despliegue documentado usa `RUMBO_BASE_PATH=/demos/rumbo-hn`. En ese destino las solicitudes van a `/demos/rumbo-hn/api/v1/...`; el navegador no enviará una cookie limitada a `/api/v1`. Bryan debe hacer que la ruta de la cookie incluya el subdirectorio configurado, actualizar la limpieza de cookie y probar login → sesión → mutación → logout en el origen real o un staging equivalente. Owen no modifica el backend en este bloque.
+Bryan corrigió `backend/src/Auth/SessionCookieManager.php` en `block/bryan-b01` para que las cookies de sesión y CSRF, incluida su limpieza, usen `RUMBO_BASE_PATH + /api/v1`. La combinación local de ambos bloques compila y pasa las pruebas frontend. Todavía no se ha demostrado que esa revisión esté desplegada en el laboratorio ni que login → sesión → mutación → logout funcione allí con cuentas sintéticas. Owen no modifica el backend en este bloque.
 
 ## Validación pendiente para la PR de integración
 
-1. Corregir y verificar la ruta de cookie en B01; disponer de una cuenta de prueba activa sin usar datos reales.
+1. Verificar que la corrección de cookie de B01 está desplegada; disponer de dos cuentas sintéticas activas y confirmar el respaldo del demo y la base.
 2. Construir ambos bloques juntos bajo la base del destino y ejecutar frontend y suite PHP.
 3. Probar en navegador login, recarga, CSRF, movimientos, idempotencia, paginación, aislamiento de dos cuentas, errores y cierre de sesión.
 4. Revisar las pantallas locales restantes antes de activar el modo API para todas las personas.
