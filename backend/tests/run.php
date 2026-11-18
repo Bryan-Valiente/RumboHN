@@ -241,6 +241,21 @@ $test('Origen exacto y opciones de cookie aplican SameSite y HttpOnly', static f
     $csrf = $manager->csrfOptions(time() + 3600);
     $assert($session['httponly'] === true && $session['samesite'] === 'Strict');
     $assert($csrf['httponly'] === false && $csrf['samesite'] === 'Strict');
+    $previousBasePath = getenv('RUMBO_BASE_PATH');
+    try {
+        putenv('RUMBO_BASE_PATH');
+        $defaultPaths = new SessionCookieManager(new Config());
+        $assert($defaultPaths->sessionOptions(time() + 3600)['path'] === '/api/v1');
+        $assert($defaultPaths->csrfOptions(time() + 3600)['path'] === '/api/v1');
+        putenv('RUMBO_BASE_PATH=/demos/rumbo-hn');
+        $deployedPaths = new SessionCookieManager(new Config());
+        $assert($deployedPaths->sessionOptions(time() + 3600)['path'] === '/demos/rumbo-hn/api/v1');
+        $assert($deployedPaths->csrfOptions(time() + 3600)['path'] === '/demos/rumbo-hn/api/v1');
+    } finally {
+        $previousBasePath === false
+            ? putenv('RUMBO_BASE_PATH')
+            : putenv('RUMBO_BASE_PATH=' . $previousBasePath);
+    }
     putenv('RUMBO_APP_ENV=production');
     try {
         $assert((new SessionCookieManager(new Config()))->sessionOptions(time() + 3600)['secure'] === true);
