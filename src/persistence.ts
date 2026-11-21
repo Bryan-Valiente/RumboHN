@@ -8,6 +8,7 @@ export const PASSWORD_ITERATIONS = 120_000
 
 export type DemoProfile = {
   name: string
+  email?: string
   preferredGoals: string[]
   incomeFrequency: string
   incomeAmount: number
@@ -83,6 +84,7 @@ export function normalizeFinancialState(value: Partial<FinancialState> | null | 
 function normalizeProfile(value: Partial<DemoProfile>) {
   return {
     name: String(value.name || '').trim(),
+    email: typeof value.email === 'string' ? value.email.trim().toLowerCase() : '',
     preferredGoals: Array.isArray(value.preferredGoals) ? value.preferredGoals : [],
     incomeFrequency: String(value.incomeFrequency || 'Mensual'),
     incomeAmount: typeof value.incomeAmount === 'number' && Number.isFinite(value.incomeAmount) ? value.incomeAmount : 0,

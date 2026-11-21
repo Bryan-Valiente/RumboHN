@@ -6,8 +6,8 @@ on:
       - main
   push:
     branches:
-      - feature/bryan
-      - feature/owen
+      - block/bryan-b01
+      - block/owen-o01
 
 permissions:
   contents: read
