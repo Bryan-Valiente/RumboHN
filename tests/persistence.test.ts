@@ -71,13 +71,15 @@ describe('workspace persistence', () => {
 
   it('encrypts the workspace and rejects an incorrect password', async () => {
     const storage = new MemoryStorage()
-    const envelope = await encryptWorkspace({ ...workspace, version: 2 }, 'rumbo-seguro-123')
+    const envelope = await encryptWorkspace({ ...workspace, version: 2, profile: { ...workspace.profile, email: 'owen@example.com' } }, 'rumbo-seguro-123')
     storage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify(envelope))
     expect(storage.getItem(WORKSPACE_STORAGE_KEY)).not.toContain('Café')
+    expect(storage.getItem(WORKSPACE_STORAGE_KEY)).not.toContain('owen@example.com')
     expect(inspectWorkspaceStorage(storage).kind).toBe('encrypted')
     await expect(decryptWorkspace(envelope, 'incorrecta-123')).rejects.toThrow('contraseña')
     const restored = await decryptWorkspace(envelope, 'rumbo-seguro-123')
     expect(restored.workspace.financial.movements[0].name).toBe('Café')
+    expect(restored.workspace.profile.email).toBe('owen@example.com')
   })
 
   it('keeps a legacy workspace available for explicit migration', () => {

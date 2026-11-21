@@ -1,6 +1,14 @@
 # Rumbo HN — Tu dinero merece un rumbo
 
-Prototipo visual, interactivo y responsive de una PWA de administración financiera personal para revisión de Bryan y su socio.
+Aplicación financiera de RUMBO HN. El espacio cifrado local sigue siendo el modo predeterminado; O01 prepara un modo separado para cuentas conectadas al backend B01.
+
+## Estado actual de O01
+
+- La PWA local se puede instalar y conserva sus datos solo en el navegador del dispositivo.
+- El modo conectado se activa únicamente al construir con `VITE_RUMBO_CLIENT_MODE=api`. Incluye acceso a una cuenta existente, perfil, resumen del servidor y movimientos. No importa automáticamente datos locales.
+- Para el demo bajo subdirectorio, compilar con `npm run build -- --base=/demos/rumbo-hn/` y desplegar cliente y API bajo el mismo origen.
+- La ruta de la cookie de sesión en B01 debe corregirse antes de validar el recorrido autenticado en Hostinger. Véase [integración O01–B01](docs/OWEN-O01-B01-INTEGRATION.md).
+- Los apartados históricos de esta guía describen etapas anteriores de demostración; no sustituyen el estado de integración anterior.
 
 ## Alcance
 
