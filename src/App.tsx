@@ -426,9 +426,14 @@ function NotificationSettings({ preferences, update }: { preferences: FinancialS
 
 function Help() { return <div><SectionHeader eyebrow="ESTAMOS PARA AYUDAR" title="Centro de ayuda" description="Respuestas cortas para empezar con tranquilidad." /><div className="help-grid"><article><div className="help-icon"><BookOpen size={21} /></div><h3>Empezar desde cero</h3><p>Una guía sencilla para entender ingresos, gastos, límites y metas.</p><button className="inline-link">Leer la guía <ArrowRight size={15} /></button></article><article><div className="help-icon"><CircleHelp size={21} /></div><h3>Preguntas frecuentes</h3><p>Qué significa cada número y cómo usar el asistente sin miedo.</p><button className="inline-link">Ver respuestas <ArrowRight size={15} /></button></article><article><div className="help-icon"><ShieldCheck size={21} /></div><h3>Privacidad y confianza</h3><p>Qué guarda Rumbo, qué no guarda y por qué esta demo es segura.</p><button className="inline-link">Conocer más <ArrowRight size={15} /></button></article></div><div className="help-contact"><div className="assistant-mark"><Bot size={22} /></div><div><span className="mini-label">¿NO ENCONTRÁS LO QUE BUSCÁS?</span><h3>Preguntale al asistente</h3><p>Probá una pregunta con datos de demostración.</p></div><button className="button button-dark">Abrir conversación <ArrowRight size={16} /></button></div></div> }
 
+function getAdminPath() {
+  const baseUrl = new URL(import.meta.env.BASE_URL || '/', window.location.href)
+  return new URL('admin/', baseUrl).pathname
+}
+
 function AuthModal({ mode, setMode, close, startLocal }: { mode: 'signup' | 'login'; setMode: (mode: 'signup' | 'login') => void; close: () => void; startLocal: () => void }) {
   return <div className="modal-backdrop"><div className="auth-modal">
-    <button className="close-button" onClick={close} aria-label="Cerrar"><X size={19} /></button>
+    <button className="close-button" onClick={close} aria-label="Cerrar"><X size={19} /></button>{mode === 'login' && <a className="admin-access-button" href={getAdminPath()} aria-label="Acceso administrativo" title="Acceso administrativo"><Settings size={17} aria-hidden="true" /></a>}
     <div className="auth-brand"><Brand /></div>
     <div className="auth-header"><span className="eyebrow">ESPACIO LOCAL</span><h2>{mode === 'signup' ? 'Creá tu espacio en este dispositivo.' : 'Acceso a tu espacio local'}</h2><p>Este sitio no crea cuentas en la base de datos de Bryan. Tus datos quedan cifrados únicamente en este navegador.</p></div>
     <div className="auth-tabs"><button className={mode === 'signup' ? 'active' : ''} onClick={() => setMode('signup')}>Crear espacio local</button><button className={mode === 'login' ? 'active' : ''} onClick={() => setMode('login')}>Abrir espacio local</button></div>
