@@ -20,6 +20,8 @@ export type HnlMovementWrite = {
 
 export type ServerProfile = { id: string; email: string | null; displayName: string; currency: 'HNL'; accountStatus: string; onboardingCompleted: boolean }
 export type ServerSession = { profile: ServerProfile; session: { expiresAt: string }; csrfToken: string }
+export type RegistrationRequest = { email: string; password: string; displayName: string }
+export type RegistrationResult = { status: 'pending-verification' }
 export type ServerMovement = Omit<HnlMovementWrite, 'sourceType'> & { id: string; userId: string; sourceType: 'manual' | 'quick-expense' | 'reminder-payment'; createdAt: string; updatedAt: string }
 export type ServerSummary = { currency: 'HNL'; confirmedIncome: string; confirmedExpenses: string; totalBalance: string; savingsAllocated: string; availableBalance: string; pendingObligations: string; projectedBalance: string }
 
@@ -102,6 +104,7 @@ export function createRumboApi(transport: ApiTransport = createApiTransport(glob
   }
 
   return {
+    register: async (registration: RegistrationRequest) => item<RegistrationResult>(await request('/api/v1/auth/register', { method: 'POST', body: registration })),
     session: async () => {
       const result = item<ServerSession>(await request('/api/v1/auth/session'))
       transport.setCsrfToken?.(result.data.csrfToken)
