@@ -6,13 +6,23 @@ const meta = { requestId: 'req-1' }
 const movement = { transactionType: 'income' as const, name: 'Ingreso', category: 'Salario', amount: '1250.25', currency: 'HNL' as const, date: '2026-11-15' }
 
 describe('Rumbo API contract adapter', () => {
-  it('submits account registration to B01 and keeps it pending activation', async () => {
-    const request = vi.fn(async () => ({ data: { status: 'pending-verification' }, meta }))
+  it('sends the real-account registration contract in the Honduran locale', async () => {
+    const request = vi.fn(async () => ({ data: { status: 'pending-admin-approval' }, meta }))
     const api = createRumboApi({ request } as ApiTransport)
-    const registration = { displayName: 'Owen Prueba', email: 'owen@example.com', password: 'a-valid-test-password' }
 
-    await expect(api.register(registration)).resolves.toMatchObject({ data: { status: 'pending-verification' } })
-    expect(request).toHaveBeenCalledWith('/api/v1/auth/register', { method: 'POST', body: registration })
+    await expect(api.register('persona@example.test', 'Rumbo-Segura-2026!', 'Persona Sintética')).resolves.toMatchObject({
+      data: { status: 'pending-admin-approval' },
+    })
+    expect(request).toHaveBeenCalledWith('/api/v1/auth/register', {
+      method: 'POST',
+      body: {
+        email: 'persona@example.test',
+        password: 'Rumbo-Segura-2026!',
+        displayName: 'Persona Sintética',
+        timezone: 'America/Tegucigalpa',
+        locale: 'es-HN',
+      },
+    })
   })
   it('uses B01 session and paginated movement envelopes', async () => {
     const request = vi.fn(async (path: string) => path.endsWith('/movements')

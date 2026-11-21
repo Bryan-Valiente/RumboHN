@@ -8,6 +8,8 @@ import {
   Sunrise, Sunset, Target, TrendingUp, UserRound, Wallet, WalletCards, X, Zap,
 } from 'lucide-react'
 import { answerAssistant, assistantPrompts } from './assistant'
+import ConnectedApp from './client/ConnectedApp'
+import { createRumboApi } from './client/rumboApi'
 import { PersonalReminderModal } from './PersonalReminderModal'
 import { calculateBudget, calculateSavingsPlan, calculateSummary, daysUntil, DEMO_TODAY, emptyFinancialState, formatDateForDisplay, formatGoalDate, getDailyReport, getDailySummary, getNotifications, getReminderStatus, markReminderPaid as applyReminderPayment, reverseReminderPayment } from './finance'
 import type { Budget, FinancialNotification, FinancialState, Movement, MovementKind, MovementTemplate, NotificationKey, Reminder, ReminderCategory, ReminderFrequency, SavingsFrequency, SavingsGoal } from './finance'
@@ -17,8 +19,10 @@ type Screen = 'home' | 'dashboard' | 'movimientos' | 'presupuestos' | 'metas' | 
 type Icon = ComponentType<{ size?: number; strokeWidth?: number; className?: string }>
 type Plan = { id: string; name: string; price: string; note: string; featured: boolean; items: string[] }
 type OnboardingInput = { name: string; password: string; incomeFrequency: string; incomeAmount: number; preferredGoals: string[]; recurringExpenses: Array<{ name: string; category: string; amount: number }> }
+type AuthInput = { name: string; email: string; password: string }
 const money = new Intl.NumberFormat('es-HN', { style: 'currency', currency: 'HNL', maximumFractionDigits: 2 })
 const formatMoney = (value: number) => money.format(value).replace('HNL', 'L')
+const serverApi = createRumboApi()
 function PersonalMovementModal({ movement, defaultKind, currentDate, close, submit }: { movement: Movement | null; defaultKind: MovementKind; currentDate: string; close: () => void; submit: (event: FormEvent<HTMLFormElement>) => void }) { return <div className="modal-backdrop"><div className="small-modal"><button className="close-button" onClick={close} aria-label="Cerrar"><X size={19} /></button><span className="eyebrow">TU ESPACIO LOCAL</span><h2>{movement ? 'Editar movimiento' : defaultKind === 'income' ? 'Registrar dinero recibido' : 'Registrar movimiento'}</h2><p>Los ingresos confirmados cambian tu saldo una sola vez. Los movimientos se guardan en este navegador.</p><form onSubmit={submit}><label>Nombre o descripción<input name="name" defaultValue={movement?.name || ''} placeholder={defaultKind === 'income' ? 'Ej. Comisión de hoy…' : 'Ej. Compra de la semana…'} required /></label><div className="form-grid"><label>Monto en lempiras<input name="amount" type="number" min="0.01" step="0.01" defaultValue={movement?.amount || ''} placeholder="1,500.00" required /></label><label>Tipo<select name="kind" defaultValue={movement?.kind || defaultKind}><option value="expense">Gasto externo</option><option value="income">Dinero recibido</option></select></label></div><label>Categoría<select name="category" defaultValue={movement?.category || (defaultKind === 'income' ? 'Salario' : 'Alimentación')}><option>Alimentación</option><option>Hogar</option><option>Transporte</option><option>Salario</option><option>Emprendimiento</option><option>Comisiones</option><option>Propinas</option><option>Tiempo libre</option><option>Otros</option></select></label><div className="form-grid"><label>Fecha<input name="date" type="date" defaultValue={movement?.date || currentDate} required /></label><label>Recurrencia<select name="recurrence" defaultValue={movement?.recurrence || 'one-time'}><option value="one-time">Una vez</option><option value="daily">Diaria</option><option value="weekly">Semanal</option><option value="biweekly">Quincenal</option><option value="monthly">Mensual</option></select></label></div><label>Fuente opcional<input name="source" defaultValue={movement?.source || ''} placeholder="Ej. Cliente, negocio o trabajo" /></label><label className="check-field"><input name="planned" type="checkbox" defaultChecked={movement?.planned || false} /> Marcar como ingreso futuro esperado</label><button className="button button-dark full-width" type="submit">{movement ? 'Guardar cambios' : 'Registrar en mi espacio'} <Plus size={17} /></button></form></div></div> }
 const planOptions: Plan[] = [
   { id: 'basico', name: 'Básico', price: '5', note: 'Para empezar sin presión', featured: false, items: ['Resumen mensual', '3 metas de ahorro', 'Asistente con ejemplos'] },
@@ -53,6 +57,7 @@ export default function App() {
   const [dark, setDark] = useState(false)
   const [authOpen, setAuthOpen] = useState(false)
   const [authMode, setAuthMode] = useState<'signup' | 'login'>('signup')
+  const [serverMode, setServerMode] = useState(false)
   const [onboardingOpen, setOnboardingOpen] = useState(false)
   const financial = workspace?.financial || emptyFinancialState
   const profile = workspace?.profile || null
@@ -97,6 +102,17 @@ export default function App() {
     return () => window.clearInterval(interval)
   }, [profile])
 
+  useEffect(() => {
+    let active = true
+    void serverApi.session().then((result) => {
+      const roles = result.data.profile.roles || []
+      if (active && !roles.includes('admin')) setServerMode(true)
+    }).catch(() => {
+      // A missing customer session is the normal state for the local demo.
+    })
+    return () => { active = false }
+  }, [])
+
   const summary = useMemo(() => calculateSummary(financial), [financial])
   const currentDate = todayKey()
   const notifications = useMemo(() => getNotifications(financial, currentDate).filter((item) => !dismissedNotifications.includes(item.id)), [financial, dismissedNotifications, currentDate])
@@ -111,6 +127,18 @@ export default function App() {
   const launchAuth = (mode: 'signup' | 'login' = 'signup') => { setAuthMode(mode); setAuthOpen(true) }
   const launchOnboarding = () => { setAuthOpen(false); setOnboardingOpen(true) }
   const showNotice = (message: string) => { setNotice(message); window.setTimeout(() => setNotice(''), 2600) }
+
+  const submitAuth = async (input: AuthInput) => {
+    if (authMode === 'signup') {
+      await serverApi.register(input.email, input.password, input.name)
+      setAuthOpen(false)
+      showNotice('Cuenta creada. Quedó pendiente de activación administrativa.')
+      return
+    }
+    await serverApi.login(input.email, input.password)
+    setAuthOpen(false)
+    setServerMode(true)
+  }
 
   const unlockWorkspace = async (password: string) => {
     const inspection = inspectWorkspaceStorage()
@@ -245,6 +273,7 @@ export default function App() {
 
   if (locked) return <div className="app secure-gate"><UnlockWorkspace onUnlock={unlockWorkspace} error={unlockError} /></div>
   if (migrationWorkspace && !workspace) return <div className="app secure-gate"><LegacyMigrationGate workspace={migrationWorkspace} onMigrate={migrateWorkspace} onBackup={downloadBackup} /></div>
+  if (serverMode) return <ConnectedApp />
 
   return (
     <div className={dark ? 'app dark' : 'app'}>
@@ -266,7 +295,7 @@ export default function App() {
         </PersonalAppShell>
       )}
 
-      {authOpen && <AuthModal mode={authMode} setMode={setAuthMode} close={() => setAuthOpen(false)} startLocal={launchOnboarding} />}
+      {authOpen && <AuthModal mode={authMode} setMode={setAuthMode} close={() => setAuthOpen(false)} submit={submitAuth} />}
       {onboardingOpen && <PersonalOnboarding close={() => setOnboardingOpen(false)} finish={createWorkspace} />}
       {modal === 'movement' && <PersonalMovementModal movement={editingMovement} defaultKind={movementDefaultKind} currentDate={currentDate} close={() => { setModal(null); setEditingMovement(null) }} submit={saveMovement} />}
       {modal === 'quick-expense' && <PersonalQuickExpenseModal movement={editingMovement} close={() => { setModal(null); setEditingMovement(null) }} submit={saveQuickExpense} />}
@@ -431,14 +460,25 @@ function getAdminPath() {
   return new URL('admin/', baseUrl).pathname
 }
 
-function AuthModal({ mode, setMode, close, startLocal }: { mode: 'signup' | 'login'; setMode: (mode: 'signup' | 'login') => void; close: () => void; startLocal: () => void }) {
-  return <div className="modal-backdrop"><div className="auth-modal">
-    <button className="close-button" onClick={close} aria-label="Cerrar"><X size={19} /></button>{mode === 'login' && <a className="admin-access-button" href={getAdminPath()} aria-label="Acceso administrativo" title="Acceso administrativo"><Settings size={17} aria-hidden="true" /></a>}
-    <div className="auth-brand"><Brand /></div>
-    <div className="auth-header"><span className="eyebrow">ESPACIO LOCAL</span><h2>{mode === 'signup' ? 'Creá tu espacio en este dispositivo.' : 'Acceso a tu espacio local'}</h2><p>Este sitio no crea cuentas en la base de datos de Bryan. Tus datos quedan cifrados únicamente en este navegador.</p></div>
-    <div className="auth-tabs"><button className={mode === 'signup' ? 'active' : ''} onClick={() => setMode('signup')}>Crear espacio local</button><button className={mode === 'login' ? 'active' : ''} onClick={() => setMode('login')}>Abrir espacio local</button></div>
-    {mode === 'signup' ? <button className="button button-dark full-width" onClick={startLocal}>Continuar con espacio local <ArrowRight size={17} /></button> : <p className="local-auth-note">Si ya guardaste un espacio en este navegador, la pantalla para desbloquearlo aparece automáticamente al abrir la PWA. Un espacio creado en otro dispositivo no se sincroniza aquí.</p>}
-  </div></div>
+function AuthModal({ mode, setMode, close, submit }: { mode: 'signup' | 'login'; setMode: (mode: 'signup' | 'login') => void; close: () => void; submit: (input: AuthInput) => Promise<void> }) {
+  const [showPassword, setShowPassword] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const changeMode = (next: 'signup' | 'login') => { setError(''); setMode(next) }
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const values = new FormData(event.currentTarget)
+    const name = String(values.get('name') || '').trim()
+    const email = String(values.get('email') || '').trim()
+    const password = String(values.get('password') || '')
+    if (mode === 'signup' && password.length < 12) { setError('La contraseña debe tener al menos 12 caracteres.'); return }
+    setBusy(true)
+    setError('')
+    try { await submit({ name, email, password }) }
+    catch (cause) { setError(cause instanceof Error ? cause.message : 'No se pudo completar la solicitud.') }
+    finally { setBusy(false) }
+  }
+  return <div className="modal-backdrop"><div className="auth-modal"><button className="close-button" onClick={close} aria-label="Cerrar"><X size={19} /></button>{mode === 'login' && <a className="admin-access-button" href={getAdminPath()} aria-label="Acceso administrativo" title="Acceso administrativo"><Settings size={17} aria-hidden="true" /></a>}<div className="auth-brand"><Brand /></div><div className="auth-header"><span className="eyebrow">{mode === 'signup' ? 'CUENTA REAL · HNL' : 'ACCESO SEGURO'}</span><h2>{mode === 'signup' ? 'Creá tu cuenta de Rumbo.' : 'Entrá a tu cuenta.'}</h2><p>{mode === 'signup' ? 'Tus datos se guardan en el servidor. La cuenta queda pendiente de activación administrativa antes del primer acceso.' : 'Usá una cuenta activa para abrir tu espacio financiero respaldado por el servidor.'}</p></div><div className="auth-tabs"><button type="button" className={mode === 'signup' ? 'active' : ''} onClick={() => changeMode('signup')}>Crear espacio</button><button type="button" className={mode === 'login' ? 'active' : ''} onClick={() => changeMode('login')}>Iniciar sesión</button></div><form onSubmit={handleSubmit}>{mode === 'signup' && <label>Tu nombre<input name="name" placeholder="¿Cómo te llamamos?…" autoComplete="name" required /></label>}<label>Correo electrónico<input name="email" type="email" placeholder="nombre@correo.com…" autoComplete="email" required /></label><label>Contraseña<div className="password-input"><input name="password" type={showPassword ? 'text' : 'password'} placeholder="Mínimo 12 caracteres…" autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} minLength={mode === 'signup' ? 12 : 1} required /><button type="button" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'} aria-pressed={showPassword}>{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></div></label>{error && <p className="auth-error" role="alert">{error}</p>}<button className="button button-dark full-width" type="submit" disabled={busy}>{busy ? 'Conectando…' : mode === 'signup' ? 'Crear cuenta real' : 'Iniciar sesión'} <ArrowRight size={17} /></button></form><small className="form-disclaimer"><ShieldCheck size={14} /> {mode === 'signup' ? 'La demo local sigue disponible desde «Empezar gratis».' : 'Tu sesión usa cookies seguras y verificación CSRF.'}</small></div></div>
 }
 
 function Onboarding({ step, setStep, selections, setSelections, close, finish }: { step: number; setStep: (step: number) => void; selections: string[]; setSelections: (value: string[]) => void; close: () => void; finish: () => void }) { const steps = [{ title: 'Empezá por lo que recibís', copy: 'Podés tener un salario, un emprendimiento o varias entradas. Rumbo se adapta.', options: ['Salario o quincena', 'Emprendimiento', 'Varias entradas', 'Ingresos irregulares'] }, { title: '¿Qué querés ordenar primero?', copy: 'Elegí una o varias prioridades. Después podés explorar todo lo demás.', options: ['Controlar mis gastos', 'Ahorrar para una meta', 'Organizar mi hogar', 'Manejar ingresos de negocio', 'Ordenar pagos recurrentes', 'Mejorar mis hábitos'] }, { title: 'Tu espacio ya está listo', copy: `Vamos a destacar herramientas para ${selections.length ? selections.join(' y ').toLowerCase() : 'tu primera exploración'}. Todo sigue siendo demostrativo.`, options: ['Ver mi resumen'] }]; const current = steps[step]; const choose = (option: string) => { if (step === 2) return finish(); setSelections(selections.includes(option) ? selections.filter((item) => item !== option) : [...selections, option]); if (step === 0 || option === 'Controlar mis gastos') setStep(step + 1) }; return <div className="modal-backdrop"><div className="onboarding-modal"><button className="close-button" onClick={close} aria-label="Cerrar"><X size={19} /></button><div className="onboarding-progress"><span>CONFIGURACIÓN GUIADA</span><strong>0{step + 1} <small>/ 0{steps.length}</small></strong><div><i style={{ width: `${((step + 1) / steps.length) * 100}%` }} /></div></div><div className="onboarding-visual"><div className="onboarding-orb"><span>{step === 2 ? <Check size={32} /> : <span>{step + 1}</span>}</span></div><span className="visual-caption">Un paso a la vez.</span></div><div className="auth-header"><span className="eyebrow">{step === 2 ? 'LISTO PARA EXPLORAR' : `PASO 0${step + 1}`}</span><h2>{current.title}</h2><p>{current.copy}</p></div><div className="onboarding-options">{current.options.map((option, index) => <button key={option} className={selections.includes(option) || (step === 2 && index === 0) ? 'selected' : ''} onClick={() => choose(option)}><span>{index + 1}</span>{option}<ArrowRight size={17} /></button>)}</div>{step < 2 && <button className="button button-dark full-width onboarding-next" onClick={() => setStep(step + 1)}>Continuar con mi selección <ArrowRight size={17} /></button>}<button className="text-button onboarding-skip" onClick={finish}>Saltar configuración</button></div></div> }

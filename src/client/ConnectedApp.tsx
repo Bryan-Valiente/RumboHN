@@ -65,12 +65,12 @@ export default function ConnectedApp() {
     const values = new FormData(form)
     setBusy(true); setError('')
     try {
-      const result = await api.register({
-        displayName: String(values.get('displayName') || '').trim(),
-        email: String(values.get('email') || '').trim().toLowerCase(),
-        password: String(values.get('password') || ''),
-      })
-      if (result.data.status !== 'pending-verification') throw new Error('El servidor no confirmó la solicitud de cuenta.')
+      const result = await api.register(
+        String(values.get('email') || '').trim().toLowerCase(),
+        String(values.get('password') || ''),
+        String(values.get('displayName') || '').trim(),
+      )
+      if (!['pending-verification', 'pending-admin-approval'].includes(result.data.status)) throw new Error('El servidor no confirmó la solicitud de cuenta.')
       form.reset()
       setPasswordVisible(false)
       setView('registration-pending')

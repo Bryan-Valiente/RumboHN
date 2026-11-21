@@ -108,7 +108,23 @@ final class Config
     public function registrationEnabled(): bool
     {
         return $this->boolean('RUMBO_REGISTRATION_ENABLED', false)
-            && $this->boolean('RUMBO_ACCOUNT_VERIFICATION_READY', false);
+            && ($this->registrationMode() === 'admin_approval'
+                || $this->boolean('RUMBO_ACCOUNT_VERIFICATION_READY', false));
+    }
+
+    public function registrationMode(): string
+    {
+        $mode = $this->get('RUMBO_REGISTRATION_MODE', 'email_verification');
+        if (!in_array($mode, ['email_verification', 'admin_approval'], true)) {
+            throw new RuntimeException('RUMBO_REGISTRATION_MODE no es válido.');
+        }
+
+        return $mode;
+    }
+
+    public function registrationUsesEmailVerification(): bool
+    {
+        return $this->registrationMode() === 'email_verification';
     }
 
     public function passwordRecoveryEnabled(): bool

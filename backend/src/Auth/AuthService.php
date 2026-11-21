@@ -54,7 +54,7 @@ final class AuthService
             throw new ApiException(422, 'VALIDATION_ERROR', $exception->getMessage(), ['field' => 'password']);
         }
 
-        $this->repository->createPendingAccount(
+        $created = $this->repository->createPendingAccount(
             Uuid::v4(),
             $email,
             $passwordHash,
@@ -63,6 +63,9 @@ final class AuthService
             $locale,
             $this->clock->now(),
         );
+        if (!$created) {
+            throw new ApiException(409, 'CONFLICT', 'Ya existe una cuenta con ese correo.');
+        }
     }
 
     /** @param array<string, mixed> $data @return array<string, mixed> */
