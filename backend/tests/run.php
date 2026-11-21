@@ -27,6 +27,7 @@ use Rumbo\Backend\PasswordHasher;
 use Rumbo\Backend\Profile\ProfileRepository;
 use Rumbo\Backend\Security\Token;
 use Rumbo\Backend\SqlMigrationRunner;
+use Rumbo\Backend\Admin\AdminRepository;
 use Rumbo\Backend\Tests\Support\FakePasswordResetDelivery;
 use Rumbo\Backend\Tests\Support\FrozenClock;
 use Rumbo\Backend\Tests\Support\SqliteTestDatabase;
@@ -265,8 +266,8 @@ $test('Origen exacto y opciones de cookie aplican SameSite y HttpOnly', static f
 });
 
 if (!in_array('sqlite', PDO::getAvailableDrivers(), true)) {
-    $skipped += 9;
-    echo "SKIP 9 integration tests: pdo_sqlite no disponible.\n";
+    $skipped += 12;
+    echo "SKIP 12 integration tests: pdo_sqlite no disponible.\n";
 } else {
     $context = static function (): array {
         $pdo = SqliteTestDatabase::create();
@@ -329,6 +330,44 @@ if (!in_array('sqlite', PDO::getAvailableDrivers(), true)) {
         $ctx['clock']->advance('+1 day');
         $ctx['activator']->activate((string) $user['id']);
         $assertSame($active['trial'], $ctx['profiles']->get((string) $user['id'])['trial']);
+    });
+
+    $test('Registro devuelve conflicto seguro para correo duplicado', static function () use ($context, $throwsApi, $assertSame): void {
+        $ctx = $context();
+        $payload = [
+            'email' => 'duplicado@example.test',
+            'password' => 'Rumbo-Segura-2026!',
+            'displayName' => 'Cuenta Duplicada',
+        ];
+        $ctx['auth']->register($payload);
+        $exception = $throwsApi(static fn () => $ctx['auth']->register($payload), 'CONFLICT');
+        $assertSame('Ya existe una cuenta con ese correo.', $exception->getMessage());
+    });
+
+    $test('Aprobación de laboratorio activa la cuenta sin falsificar verificación por correo', static function () use ($context, $assert, $assertSame): void {
+        $ctx = $context();
+        $ctx['auth']->register([
+            'email' => 'laboratorio@example.test',
+            'password' => 'Rumbo-Segura-2026!',
+            'displayName' => 'Cuenta Laboratorio',
+        ]);
+        $targetId = (string) $ctx['pdo']->query("SELECT id FROM users WHERE email = 'laboratorio@example.test'")->fetchColumn();
+        $ctx['auth']->register([
+            'email' => 'operador@example.test',
+            'password' => 'Rumbo-Segura-2026!',
+            'displayName' => 'Operador Sintético',
+        ]);
+        $actorId = (string) $ctx['pdo']->query("SELECT id FROM users WHERE email = 'operador@example.test'")->fetchColumn();
+        $ctx['activator']->activate($actorId);
+
+        $admin = new AdminRepository($ctx['pdo'], false);
+        $admin->manageAccount($actorId, $targetId, ['action' => 'activate'], str_repeat('a', 32));
+        $record = $ctx['pdo']->query("SELECT status, email_verified_at FROM users WHERE id = '{$targetId}'")->fetch();
+        $assert(is_array($record));
+        $assertSame('active', $record['status']);
+        $assertSame(null, $record['email_verified_at']);
+        $profile = $ctx['profiles']->get($targetId);
+        $assert($profile['trial']['startedAt'] !== null);
     });
 
     $test('Login crea sesión hash; expiración, revocación y estado se aplican', static function () use ($context, $createActive, $assert, $assertSame, $throwsApi): void {

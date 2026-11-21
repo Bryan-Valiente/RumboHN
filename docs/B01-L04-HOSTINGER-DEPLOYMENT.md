@@ -27,8 +27,9 @@ Variables obligatorias del entorno privado:
 - RUMBO_RUNTIME_ROOT=/ruta/privada/rumbo-hn-runtime
 - RUMBO_ENV_FILE=/ruta/privada/rumbo-hn.env
 - RUMBO_LOGIN_ENABLED=true para el demo controlado
-- RUMBO_REGISTRATION_ENABLED=false
-- RUMBO_ACCOUNT_VERIFICATION_READY=false
+- RUMBO_REGISTRATION_ENABLED=true únicamente en el laboratorio controlado autorizado
+- RUMBO_REGISTRATION_MODE=admin_approval para el laboratorio sin servicio de correo; la activación administrativa no marca email_verified_at
+- RUMBO_ACCOUNT_VERIFICATION_READY=false mientras no exista entrega real de correo
 - RUMBO_PASSWORD_RECOVERY_ENABLED=false hasta disponer de correo real
 - RUMBO_COOKIE_SECURE=true
 - RUMBO_DB_NAME=u149165412_asesor
@@ -85,3 +86,7 @@ La integración posterior debe:
 - mantener HNL como strings y enviar Idempotency-Key en movimientos, aportes y pagos;
 - ejecutar pruebas de onboarding, login, recarga, aislamiento, presupuesto, metas, obligaciones, notificaciones y reportes;
 - permanecer en la rama y worktree de Owen hasta su revisión independiente.
+
+## Registro real del laboratorio controlado
+
+El frontend de esta actualización conserva el recorrido local cifrado cuando la persona elige explícitamente `Empezar gratis`, pero el tab `Crear espacio` del modal de autenticación usa `POST /api/v1/auth/register` con correo, nombre, contraseña de mínimo 12 caracteres, `America/Tegucigalpa` y `es-HN`. La cuenta queda pendiente hasta la activación desde `admin/`; no se muestra éxito si el servidor no confirma el registro. El modo `admin_approval` es solo para este laboratorio privado y debe volver a `RUMBO_REGISTRATION_ENABLED=false` antes de cualquier publicación fuera del entorno controlado.

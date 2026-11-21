@@ -6,6 +6,25 @@ const meta = { requestId: 'req-1' }
 const movement = { transactionType: 'income' as const, name: 'Ingreso', category: 'Salario', amount: '1250.25', currency: 'HNL' as const, date: '2026-11-15' }
 
 describe('Rumbo API contract adapter', () => {
+  it('sends the real-account registration contract in the Honduran locale', async () => {
+    const request = vi.fn(async () => ({ data: { status: 'pending-admin-approval' }, meta }))
+    const api = createRumboApi({ request } as ApiTransport)
+
+    await expect(api.register('persona@example.test', 'Rumbo-Segura-2026!', 'Persona Sintética')).resolves.toMatchObject({
+      data: { status: 'pending-admin-approval' },
+    })
+    expect(request).toHaveBeenCalledWith('/api/v1/auth/register', {
+      method: 'POST',
+      body: {
+        email: 'persona@example.test',
+        password: 'Rumbo-Segura-2026!',
+        displayName: 'Persona Sintética',
+        timezone: 'America/Tegucigalpa',
+        locale: 'es-HN',
+      },
+    })
+  })
+
   it('uses B01 session and paginated movement envelopes', async () => {
     const request = vi.fn(async (path: string) => path.endsWith('/movements')
       ? { data: [{ id: 'm1', amount: '15000.00', currency: 'HNL' }], meta: { ...meta, nextCursor: null, hasMore: false } }

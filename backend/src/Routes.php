@@ -56,7 +56,10 @@ final class Routes
         $reminders = static fn (): ReminderRepository => new ReminderRepository($database->connection());
         $notifications = static fn (): NotificationRepository => new NotificationRepository($database->connection());
         $reports = static fn (): FinancialReportRepository => new FinancialReportRepository($database->connection());
-        $admin = static fn (): AdminRepository => new AdminRepository($database->connection());
+        $admin = static fn (): AdminRepository => new AdminRepository(
+            $database->connection(),
+            $config->registrationUsesEmailVerification(),
+        );
 
         $handlers = [];
         $handlers['GET /api/v1/health'] = static function (Request $request) use ($database): never {
@@ -73,7 +76,11 @@ final class Routes
                 throw new ApiException(503, 'AUTH_NOT_AVAILABLE', 'El registro todavía no está habilitado.');
             }
             $auth()->register($request->json());
-            JsonResponse::success(['status' => 'pending-verification'], $request->requestId, 202);
+            JsonResponse::success([
+                'status' => $config->registrationMode() === 'admin_approval'
+                    ? 'pending-admin-approval'
+                    : 'pending-verification',
+            ], $request->requestId, 202);
         };
 
         $handlers['POST /api/v1/auth/login'] = static function (Request $request) use ($config, $auth, $cookies): never {

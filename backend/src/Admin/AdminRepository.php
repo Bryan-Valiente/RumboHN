@@ -17,7 +17,10 @@ final class AdminRepository
 {
     private readonly AuditLogger $audit;
 
-    public function __construct(private readonly PDO $pdo)
+    public function __construct(
+        private readonly PDO $pdo,
+        private readonly bool $markEmailVerified = true,
+    )
     {
         $this->audit = new AuditLogger($pdo);
     }
@@ -135,17 +138,28 @@ final class AdminRepository
             $metadata = ['previousStatus' => (string) $subject['status']];
 
             if ($action === 'activate' || $action === 'restore') {
-                $account = $pdo->prepare(
-                    'UPDATE users
-                     SET status = :status, email_verified_at = COALESCE(email_verified_at, :verified_at), updated_at = :updated_at
-                     WHERE id = :id'
-                );
-                $account->execute([
-                    ':status' => 'active',
-                    ':verified_at' => $timestamp,
-                    ':updated_at' => $timestamp,
-                    ':id' => $subjectUserId,
-                ]);
+                if ($this->markEmailVerified) {
+                    $account = $pdo->prepare(
+                        'UPDATE users
+                         SET status = :status, email_verified_at = COALESCE(email_verified_at, :verified_at), updated_at = :updated_at
+                         WHERE id = :id'
+                    );
+                    $account->execute([
+                        ':status' => 'active',
+                        ':verified_at' => $timestamp,
+                        ':updated_at' => $timestamp,
+                        ':id' => $subjectUserId,
+                    ]);
+                } else {
+                    $account = $pdo->prepare(
+                        'UPDATE users SET status = :status, updated_at = :updated_at WHERE id = :id'
+                    );
+                    $account->execute([
+                        ':status' => 'active',
+                        ':updated_at' => $timestamp,
+                        ':id' => $subjectUserId,
+                    ]);
+                }
                 if ($action === 'activate') {
                     $trial = $pdo->prepare(
                         'UPDATE user_profiles
