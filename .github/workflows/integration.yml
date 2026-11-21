@@ -3,7 +3,8 @@ name: RUMBO integration
 on:
   push:
     branches:
-      - integration/owen-bryan-b01-check
+      - block/bryan-b01
+      - block/owen-o01
   pull_request:
     branches:
       - main
